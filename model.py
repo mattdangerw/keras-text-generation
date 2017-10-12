@@ -5,62 +5,46 @@ from keras.utils.data_utils import get_file
 import numpy as np
 import sys
 
-print('Reading input...')
-path = get_file('nietzsche.txt', origin='https://s3.amazonaws.com/text-datasets/nietzsche.txt')
-text = open(path).read().lower()
-print('corpus length:', len(text))
+class Model(Sequential):
+    def __init__(args, vocab_size):
+        super.__init()
+        self.batch_size = args.batch_size
 
-all_chars = sorted(list(set(text)))
-vocab_size = len(all_chars)
-print('total chars:', vocab_size)
-char_indices = dict((c, i) for i, c in enumerate(all_chars))
-indices_char = dict((i, c) for i, c in enumerate(all_chars))
+        self.add(Embedding(vocab_size, args.embedding_size, batch_size=args.batch_size))
+        for layer in range(args.num_layers)
+            self.add(LSTM(args.rnn_size, stateful=True, return_sequences=True))
+        self.add(Dense(vocab_size, activation='softmax'))
+        # With sparse_categorical_crossentropy we can leave as labels as integers
+        # instead of one-hot vectors
+        self.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
+        self.summary()
 
-# Size of sample sequences, both for input data and target output. The input and
-# output sequences will be offset by a single character, e.g.
-# ['a', 'b', 'c', 'd', 'e'] -> ['b', 'c', 'd', 'e', 'f']
-# The trained model can predict in a many-to-many fashion with any length input
-# and output. However, it will only be good at modeling dependencies up to
-# sequence_length between characters.
-sequence_length=40
-# How often to create a sequence in the training data. For example a step of
-# 2 and sequence_length of 4 would lead to input strings of
-# ['a', 'b', 'c', 'd'], ['c', 'd', 'e', 'f'] ...
-# A step of sequence_length will take a single pass through the data, slicing
-# it into sequence_length inputs.
-step=4
-# Batch size to use when training. Because we are using a stateful rnn, this
-# constant affects how we structure our data.
-batch_size=100
+    # Reformat our data vector to feed into our model. Tricky with stateful rnns
+    def reshape_for_stateful_rnn(self, sequence):
+        passes = []
+        # Take strips of our data at every step size up to our sequence_length and
+        # cut those strips into sequence_length sequences
+        for offset in range(0, sequence_length, step):
+            pass_samples = sequence[offset:]
+            samples = pass_samples.size // sequence_length
+            pass_samples = np.resize(pass_samples, (samples, sequence_length))
+            passes.append(pass_samples)
+        # Stack our samples together and make sure they fit evenly into batches.
+        all_samples = np.concatenate(passes)
+        num_batches = all_samples.shape[0] // self.batch_size
+        # Now the tricky part, we need to reformat our data so the first sequence in
+        # the nth batch picks up exactly where the first sequence in the (n - 1)th
+        # batch left off, as the lstm cell state will not be reset between batches
+        # in the stateful model.
+        reshuffled = np.zeros((num_batches * self.batch_size, sequence_length), dtype=np.int32)
+        for batch_index in range(self.batch_size):
+            reshuffled[batch_index::self.batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
+        return reshuffled
 
-print('Vectorization...')
-indices = list(map(lambda char: char_indices[char], text))
-x = np.array(indices[:-1], dtype=np.int32)
-y = np.array(indices[1:], dtype=np.int32)
-
-# Reformat our data vector to feed into our model. Tricky with stateful rnns
-def reshape_for_stateful_rnn(sequence):
-    passes = []
-    # Take strips of our data at every step size up to our sequence_length and
-    # cut those strips into sequence_length sequences
-    for offset in range(0, sequence_length, step):
-        pass_samples = sequence[offset:]
-        samples = pass_samples.size // sequence_length
-        pass_samples = np.resize(pass_samples, (samples, sequence_length))
-        passes.append(pass_samples)
-    # Stack our samples together and make sure they fit evenly into batches.
-    all_samples = np.concatenate(passes)
-    num_batches = all_samples.shape[0] // batch_size
-    # Now the tricky part, we need to reformat our data so the first sequence in
-    # the nth batch picks up exactly where the first sequence in the (n - 1)th
-    # batch left off, as the lstm cell state will not be reset between batches
-    # in the stateful model.
-    reshuffled = np.zeros((num_batches * batch_size, sequence_length), dtype=np.int32)
-    for batch_index in range(batch_size):
-        reshuffled[batch_index::batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
-    return reshuffled
-x = reshape_for_stateful_rnn(x)
-y = reshape_for_stateful_rnn(y)
+    def train(self, data, epochs, sample):
+        x = self.reshape_for_stateful_rnn(data[:-1])
+        x = self.reshape_for_stateful_rnn(x)
+        y = self.reshape_for_stateful_rnn(y)
 
 # Y data needs an extra axis to work with the sparse categorical crossentropy
 # loss function
