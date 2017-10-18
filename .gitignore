@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+model.h5
+vocab.pkl
