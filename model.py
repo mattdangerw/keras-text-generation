@@ -4,8 +4,6 @@ from keras.layers import Dense, Embedding, LSTM
 import numpy as np
 import sys
 
-from utils import sample
-
 class Model(Sequential):
     def __init__(self, args, loader):
         super().__init__()
@@ -46,6 +44,14 @@ class Model(Sequential):
             reshuffled[batch_index::self.batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
         return reshuffled
 
+    def sample_preds(self, preds, temperature=1.0):
+        preds = np.asarray(preds).astype('float64')
+        preds = np.log(preds) / temperature
+        exp_preds = np.exp(preds)
+        preds = exp_preds / np.sum(exp_preds)
+        probas = np.random.multinomial(1, preds, 1)
+        return np.argmax(probas)
+
     def sample(self, seed_string=' ', length=400, diversity=1.0):
         self.reset_states()
 
@@ -64,7 +70,9 @@ class Model(Sequential):
 
         # Sample the model character by character
         for i in range(length):
-            char_index = preds is not None and sample(preds[0][0], diversity) or 0
+            char_index = 0
+            if preds is not None:
+                char_index = self.sample_preds(preds[0][0], diversity)
             current_sample.fill(char_index)
             full_sample = np.append(full_sample, char_index)
             preds = self.predict(current_sample, batch_size=self.batch_size, verbose=0)

@@ -3,7 +3,7 @@ import argparse
 import time
 import os
 
-from utils import TextLoader
+from text_loader import TextLoader
 from model import Model
 
 def main():
