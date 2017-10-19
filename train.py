@@ -27,12 +27,9 @@ def main():
                         help='how often to pull a training sequence from the data')
     parser.add_argument('--num-epochs', type=int, default=50,
                         help='number of epochs')
-    # FIXME: unused
-    parser.add_argument('--grad-clip', type=float, default=5.,
-                        help='clip gradients at this value')
     parser.add_argument('--learning-rate', type=float, default=0.002,
                         help='learning rate')
-    parser.add_argument('--decay-rate', type=float, default=0.97,
+    parser.add_argument('--decay-rate', type=float, default=0.01,
                         help='decay rate for rmsprop')
     parser.add_argument('--skip-sampling', action='store_true',
                         help='skip the live sampling stage of training')

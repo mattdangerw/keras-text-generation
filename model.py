@@ -1,6 +1,7 @@
 from __future__ import print_function
 from keras.models import Sequential
 from keras.layers import Dense, Embedding, LSTM, SimpleRNN, GRU
+from keras.optimizers import RMSprop
 import numpy as np
 import sys
 
@@ -27,7 +28,7 @@ class Model(Sequential):
         self.add(Dense(loader.vocab_size, activation='softmax'))
         # With sparse_categorical_crossentropy we can leave as labels as integers
         # instead of one-hot vectors
-        self.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
+        self.compile(loss='sparse_categorical_crossentropy', optimizer=RMSprop(lr=args.learning_rate, decay=args.decay_rate))
         self.summary()
 
     # Reformat our data vector to feed into our model. Tricky with stateful rnns
@@ -52,7 +53,7 @@ class Model(Sequential):
             reshuffled[batch_index::self.batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
         return reshuffled
 
-    def sample(self, seed_string='', length=400, diversity=1.0):
+    def sample(self, seed_string=' ', length=400, diversity=1.0):
         self.reset_states()
 
         full_sample = np.array([], dtype=np.int32)
