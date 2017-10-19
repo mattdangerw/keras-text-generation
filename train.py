@@ -17,8 +17,6 @@ def main():
                         help='size of RNN hidden state')
     parser.add_argument('--num-layers', type=int, default=2,
                         help='number of layers in the RNN')
-    parser.add_argument('--model', type=str, default='lstm',
-                        help='rnn, gru, or lstm')
     parser.add_argument('--batch-size', type=int, default=100,
                         help='minibatch size')
     parser.add_argument('--seq-length', type=int, default=50,
@@ -27,10 +25,6 @@ def main():
                         help='how often to pull a training sequence from the data')
     parser.add_argument('--num-epochs', type=int, default=50,
                         help='number of epochs')
-    parser.add_argument('--learning-rate', type=float, default=0.002,
-                        help='learning rate')
-    parser.add_argument('--decay-rate', type=float, default=0.01,
-                        help='decay rate for rmsprop')
     parser.add_argument('--skip-sampling', action='store_true',
                         help='skip the live sampling stage of training')
     args = parser.parse_args()

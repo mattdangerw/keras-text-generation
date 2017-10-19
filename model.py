@@ -1,7 +1,6 @@
 from __future__ import print_function
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, LSTM, SimpleRNN, GRU
-from keras.optimizers import RMSprop
+from keras.layers import Dense, Embedding, LSTM
 import numpy as np
 import sys
 
@@ -16,19 +15,13 @@ class Model(Sequential):
         self.seq_length = args.seq_length
         self.seq_step = args.seq_step
 
-        rnn_cell = SimpleRNN
-        if args.model == 'lstm':
-            rnn_cell = LSTM
-        elif args.model == 'gru':
-            rnn_cell = GRU
-
         self.add(Embedding(loader.vocab_size, args.embedding_size, batch_size=args.batch_size))
         for layer in range(args.num_layers):
-            self.add(rnn_cell(args.rnn_size, stateful=True, return_sequences=True))
+            self.add(LSTM(args.rnn_size, stateful=True, return_sequences=True))
         self.add(Dense(loader.vocab_size, activation='softmax'))
         # With sparse_categorical_crossentropy we can leave as labels as integers
         # instead of one-hot vectors
-        self.compile(loss='sparse_categorical_crossentropy', optimizer=RMSprop(lr=args.learning_rate, decay=args.decay_rate))
+        self.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
         self.summary()
 
     # Reformat our data vector to feed into our model. Tricky with stateful rnns
