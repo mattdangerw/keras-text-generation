@@ -19,6 +19,7 @@ def print_red(*args, **kwargs):
     sys.stdout.write(colorama.Fore.RED)
     return print(*args, colorama.Style.RESET_ALL, **kwargs)
 
+# FIXME: weird
 class Struct:
     def __init__(self, **args):
         self.__dict__.update(args)
@@ -36,6 +37,7 @@ class LiveSamplerCallback(Callback):
             print(self.our_model.sample(Struct(length=400, seed=' ', temperature=1.0)))
             print('-' * 50)
 
+# FIXME: name
 class Model:
     def __init__(self):
         super().__init__()
