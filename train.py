@@ -9,10 +9,10 @@ def main():
                         help='data directory containing input.txt')
     parser.add_argument('--embedding-size', type=int, default=32,
                         help='size of the embedding')
-    parser.add_argument('--rnn-size', type=int, default=128,
-                        help='size of RNN hidden state')
+    parser.add_argument('--lstm-size', type=int, default=128,
+                        help='size of LSTM layers')
     parser.add_argument('--num-layers', type=int, default=2,
-                        help='number of layers in the RNN')
+                        help='number of layers in the LSTM')
     parser.add_argument('--batch-size', type=int, default=100,
                         help='minibatch size')
     parser.add_argument('--seq-length', type=int, default=50,
@@ -28,7 +28,7 @@ def main():
 
 def train(args):
     model = Model()
-    model.train(args)
+    model.train(**vars(args))
     save(model, args.data_dir)
 
 if __name__ == '__main__':

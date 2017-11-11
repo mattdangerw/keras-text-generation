@@ -9,7 +9,7 @@ def main():
                         help='data directory containing input.txt')
     parser.add_argument('--seed', type=str, default=' ',
                         help='seed string for sampling')
-    parser.add_argument('--length', type=int, default=400,
+    parser.add_argument('--length', type=int, default=1000,
                         help='length of the sample to generate')
     parser.add_argument('--temperature', type=float, default=1.0,
                         help='Sampling temperature')
@@ -18,7 +18,8 @@ def main():
 
 def train(args):
     model = load(args.data_dir)
-    print(model.sample(args))
+    del args.data_dir
+    print(model.sample(**vars(args)))
 
 if __name__ == '__main__':
     main()
