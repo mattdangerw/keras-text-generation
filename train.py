@@ -1,6 +1,6 @@
 import argparse
 
-from model import Model, save
+from model import MetaModel, save
 
 def main():
     parser = argparse.ArgumentParser(
@@ -27,7 +27,7 @@ def main():
     train(args)
 
 def train(args):
-    model = Model()
+    model = MetaModel()
     model.train(**vars(args))
     save(model, args.data_dir)
 

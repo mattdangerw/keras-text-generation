@@ -20,8 +20,8 @@ def print_red(*args, **kwargs):
     return print(*args, colorama.Style.RESET_ALL, **kwargs)
 
 class LiveSamplerCallback(Callback):
-    def __init__(self, model):
-        self.our_model = model
+    def __init__(self, meta_model):
+        self.meta_model = meta_model
 
     def on_epoch_end(self, epoch, logs={}):
         print()
@@ -29,11 +29,12 @@ class LiveSamplerCallback(Callback):
         for diversity in [0.2, 0.5, 1.0, 1.2]:
             print('Sampling with diversity', diversity)
             print('-' * 50)
-            print(self.our_model.sample())
+            print(self.meta_model.sample())
             print('-' * 50)
 
-# FIXME: name
-class Model:
+# We wrap the keras model in our own metaclass that handles text loading,
+# provides convient train and sample functions.
+class MetaModel:
     def __init__(self):
         super().__init__()
 
@@ -167,20 +168,21 @@ class Model:
             preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
         return self.unvectorize(full_sample)
 
-    # Don't pickle the keras model
+    # Don't pickle the keras model, better to save it directly
     def __getstate__(self):
         state = self.__dict__.copy()
         del state['keras_model']
         return state
 
+# Save the keras model directly and pickle our meta model class
 def save(model, data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
     model.keras_model.save(filepath=keras_file_path)
     pickle.dump(model, open(pickle_file_path, 'wb'))
-    print_green('Model saved to', pickle_file_path)
+    print_green('Model saved to', pickle_file_path, keras_file_path)
 
-
+# Load the meta model and its internal keras model
 def load(data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
