@@ -1,4 +1,5 @@
 from __future__ import print_function
+from collections import Counter
 from keras.callbacks import Callback
 from keras.layers import Dense, Embedding, LSTM
 from keras.models import Sequential, load_model
@@ -7,7 +8,7 @@ import os
 import pickle
 import time
 
-from utils import print_green, print_red, sample_preds
+from utils import print_green, print_red, sample_preds, clean_str
 
 # Live samples the model after each epoch, which can be very useful when
 # tweaking parameters and/or dataset
@@ -30,23 +31,33 @@ class MetaModel:
     def __init__(self):
         super().__init__()
 
+    def tokenize(self, text):
+        if self.word_tokens:
+            return clean_str(text).split()
+        return text.lower()
+
     def vectorize(self, text):
-        indices = list(map(lambda char: self.char_indices[char], text))
+        tokens = self.tokenize(text)
+        indices = list(map(lambda token: self.token_indices[token], tokens))
         return np.array(indices, dtype=np.int32)
 
     def unvectorize(self, vector):
-        chars = map(lambda index: self.indices_char[index], vector.tolist())
-        return ''.join(chars)
+        tokens = map(lambda index: self.indices_token[index], vector.tolist())
+        if self.word_tokens:
+            return ' '.join(tokens)
+        return ''.join(tokens)
 
     def _load_text(self, data_dir):
-        text = open(os.path.join(data_dir, 'input.txt')).read().lower()
-        print('corpus length:', len(text))
+        text = open(os.path.join(data_dir, 'input.txt')).read()
 
-        all_chars = sorted(list(set(text)))
-        self.vocab_size = len(all_chars)
-        print('total chars:', self.vocab_size)
-        self.char_indices = dict((c, i) for i, c in enumerate(all_chars))
-        self.indices_char = dict((i, c) for i, c in enumerate(all_chars))
+        tokens = self.tokenize(text)
+        print('corpus length:', len(tokens))
+        token_counts = Counter(tokens)
+        tokens = [x[0] for x in token_counts.most_common()]
+        self.token_indices = { x: i for i, x in enumerate(tokens) }
+        self.indices_token = { i: x for i, x in enumerate(tokens) }
+        self.vocab_size = len(tokens)
+        print('vocab size:', self.vocab_size)
 
         return self.vectorize(text)
 
@@ -84,9 +95,10 @@ class MetaModel:
         keras_model.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
         return keras_model
 
-    def train(self, data_dir, batch_size, seq_length, seq_step, embedding_size, lstm_size, num_layers, num_epochs, skip_sampling):
+    def train(self, data_dir, word_tokens, batch_size, seq_length, seq_step, embedding_size, lstm_size, num_layers, num_epochs, skip_sampling):
         print_green('Loading data...')
         load_start = time.time()
+        self.word_tokens = word_tokens
         data = self._load_text(data_dir)
 
         self.batch_size = batch_size
@@ -127,7 +139,7 @@ class MetaModel:
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
-    def sample(self, seed=' ', length=400, temperature=1.0):
+    def sample(self, seed=None, length=400, temperature=1.0):
         self.keras_model.reset_states()
 
         full_sample = np.array([], dtype=np.int32)
@@ -135,15 +147,18 @@ class MetaModel:
         current_sample=np.zeros((self.batch_size, 1))
         preds = None
 
-        # Feed in seed string
         if seed:
             seed_vector = self.vectorize(seed)
-            for char_index in np.nditer(seed_vector):
-                current_sample.fill(char_index)
-                full_sample = np.append(full_sample, char_index)
-                preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
+        else: # If no seed just feed in the most common token from the training data
+            seed_vector = np.array([0], dtype=np.int32)
 
-        # Sample the model one character/word at a time
+        # Feed in seed string
+        for char_index in np.nditer(seed_vector):
+            current_sample.fill(char_index)
+            full_sample = np.append(full_sample, char_index)
+            preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
+
+        # Sample the model one token at a time
         for i in range(length):
             char_index = 0
             if preds is not None:

@@ -7,6 +7,8 @@ def main():
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data-dir', type=str, default='data/nietzsche',
                         help='data directory containing input.txt')
+    parser.add_argument('--word-tokens', action='store_true',
+                        help='whether to model the rnn at word level or char level')
     parser.add_argument('--embedding-size', type=int, default=32,
                         help='size of the embedding')
     parser.add_argument('--lstm-size', type=int, default=128,
