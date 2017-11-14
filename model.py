@@ -1,24 +1,16 @@
 from __future__ import print_function
-import colorama
 from keras.callbacks import Callback
 from keras.layers import Dense, Embedding, LSTM
 from keras.models import Sequential, load_model
 import numpy as np
 import os
 import pickle
-import sys
 import time
 
-colorama.init()
+from utils import print_green, print_red, sample_preds
 
-def print_green(*args, **kwargs):
-    sys.stdout.write(colorama.Fore.GREEN)
-    return print(*args, colorama.Style.RESET_ALL, **kwargs)
-
-def print_red(*args, **kwargs):
-    sys.stdout.write(colorama.Fore.RED)
-    return print(*args, colorama.Style.RESET_ALL, **kwargs)
-
+# Live samples the model after each epoch, which can be very useful when
+# tweaking parameters and/or dataset
 class LiveSamplerCallback(Callback):
     def __init__(self, meta_model):
         self.meta_model = meta_model
@@ -38,6 +30,14 @@ class MetaModel:
     def __init__(self):
         super().__init__()
 
+    def vectorize(self, text):
+        indices = list(map(lambda char: self.char_indices[char], text))
+        return np.array(indices, dtype=np.int32)
+
+    def unvectorize(self, vector):
+        chars = map(lambda index: self.indices_char[index], vector.tolist())
+        return ''.join(chars)
+
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read().lower()
         print('corpus length:', len(text))
@@ -49,14 +49,6 @@ class MetaModel:
         self.indices_char = dict((i, c) for i, c in enumerate(all_chars))
 
         return self.vectorize(text)
-
-    def vectorize(self, text):
-        indices = list(map(lambda char: self.char_indices[char], text))
-        return np.array(indices, dtype=np.int32)
-
-    def unvectorize(self, vector):
-        chars = map(lambda index: self.indices_char[index], vector.tolist())
-        return ''.join(chars)
 
     # Reformat our data vector to feed into our model. Tricky with stateful rnns
     def _reshape_for_stateful_rnn(self, sequence):
@@ -80,7 +72,8 @@ class MetaModel:
             reshuffled[batch_index::self.batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
         return reshuffled
 
-    def build_model(self, embedding_size, lstm_size, num_layers):
+    # Builds the underlying keras model
+    def _build_model(self, embedding_size, lstm_size, num_layers):
         keras_model = Sequential()
         keras_model.add(Embedding(self.vocab_size, embedding_size, batch_size=self.batch_size))
         for layer in range(num_layers):
@@ -112,7 +105,7 @@ class MetaModel:
 
         print_green('Building model...')
         model_start = time.time()
-        self.keras_model = self.build_model(embedding_size, lstm_size, num_layers)
+        self.keras_model = self._build_model(embedding_size, lstm_size, num_layers)
         self.keras_model.summary()
         model_end = time.time()
         print_red('Model build time', model_end - model_start)
@@ -134,14 +127,6 @@ class MetaModel:
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
-    def sample_preds(self, preds, temperature=1.0):
-        preds = np.asarray(preds).astype('float64')
-        preds = np.log(preds) / temperature
-        exp_preds = np.exp(preds)
-        preds = exp_preds / np.sum(exp_preds)
-        probas = np.random.multinomial(1, preds, 1)
-        return np.argmax(probas)
-
     def sample(self, seed=' ', length=400, temperature=1.0):
         self.keras_model.reset_states()
 
@@ -162,7 +147,7 @@ class MetaModel:
         for i in range(length):
             char_index = 0
             if preds is not None:
-                char_index = self.sample_preds(preds[0][0], temperature)
+                char_index = sample_preds(preds[0][0], temperature)
             current_sample.fill(char_index)
             full_sample = np.append(full_sample, char_index)
             preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
@@ -182,7 +167,7 @@ def save(model, data_dir):
     pickle.dump(model, open(pickle_file_path, 'wb'))
     print_green('Model saved to', pickle_file_path, keras_file_path)
 
-# Load the meta model and its internal keras model
+# Load the meta model and restore its internal keras model
 def load(data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
