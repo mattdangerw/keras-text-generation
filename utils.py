@@ -22,20 +22,30 @@ def sample_preds(preds, temperature=1.0):
     probas = np.random.multinomial(1, preds, 1)
     return np.argmax(probas)
 
-# Tokenization/string cleaning.
-# Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data
-def clean_str(string):
-    string = re.sub(r"[^가-힣A-Za-z0-9(),!?\'\`]", " ", string)
-    string = re.sub(r"\'s", " \'s", string)
-    string = re.sub(r"\'ve", " \'ve", string)
-    string = re.sub(r"n\'t", " n\'t", string)
-    string = re.sub(r"\'re", " \'re", string)
-    string = re.sub(r"\'d", " \'d", string)
-    string = re.sub(r"\'ll", " \'ll", string)
-    string = re.sub(r",", " , ", string)
-    string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " \( ", string)
-    string = re.sub(r"\)", " \) ", string)
-    string = re.sub(r"\?", " \? ", string)
-    string = re.sub(r"\s{2,}", " ", string)
-    return string.strip().lower()
+def split_words(string):
+    string = string.strip().lower()
+    string = re.sub(r'\"', ' \" ', string)
+    string = re.sub(r'\'', ' \' ', string)
+    string = re.sub(r';', ' ; ', string)
+    string = re.sub(r',', ' , ', string)
+    string = re.sub(r'!', ' ! ', string)
+    string = re.sub(r'-', ' - ', string)
+    string = re.sub(r':', ' : ', string)
+    string = re.sub(r'\.', ' . ', string)
+    string = re.sub(r'\(', ' ( ', string)
+    string = re.sub(r'\)', ' ) ', string)
+    string = re.sub(r'\?', ' ? ', string)
+    return string.split()
+
+def unsplit_words(words):
+    string = ' '.join(words)
+    string = re.sub(r' ; ', '; ', string)
+    string = re.sub(r' , ', ', ', string)
+    string = re.sub(r' ! ', '! ', string)
+    string = re.sub(r' - ', '-', string)
+    string = re.sub(r' : ', ':', string)
+    string = re.sub(r' \. ', '. ', string)
+    string = re.sub(r' \( ', ' (', string)
+    string = re.sub(r' \) ', ') ', string)
+    string = re.sub(r' \? ', '? ', string)
+    return string

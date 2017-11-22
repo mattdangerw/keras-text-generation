@@ -8,7 +8,7 @@ import os
 import pickle
 import time
 
-from utils import print_green, print_red, sample_preds, clean_str
+from utils import print_green, print_red, sample_preds, split_words, unsplit_words
 
 # Live samples the model after each epoch, which can be very useful when
 # tweaking parameters and/or dataset
@@ -33,8 +33,13 @@ class MetaModel:
 
     def tokenize(self, text):
         if self.word_tokens:
-            return clean_str(text).split()
+            return split_words(text)
         return text.lower()
+
+    def untokenize(self, tokens):
+        if self.word_tokens:
+            return unsplit_words(tokens)
+        return ''.join(tokens)
 
     def vectorize(self, text):
         tokens = self.tokenize(text)
@@ -43,9 +48,7 @@ class MetaModel:
 
     def unvectorize(self, vector):
         tokens = map(lambda index: self.indices_token[index], vector.tolist())
-        if self.word_tokens:
-            return ' '.join(tokens)
-        return ''.join(tokens)
+        return self.untokenize(tokens)
 
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read()
