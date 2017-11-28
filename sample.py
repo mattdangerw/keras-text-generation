@@ -7,7 +7,7 @@ def main():
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data-dir', type=str, default='data/nietzsche',
                         help='data directory containing input.txt')
-    parser.add_argument('--seed', type=str, default=' ',
+    parser.add_argument('--seed', type=str, default=None,
                         help='seed string for sampling')
     parser.add_argument('--length', type=int, default=1000,
                         help='length of the sample to generate')

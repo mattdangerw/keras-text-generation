@@ -67,7 +67,7 @@ class MetaModel:
         # Take a random sampling of lines
         if (len(lines) > num_seeds * 4):
             lines = random.sample(lines, num_seeds * 4)
-        # Take the top quartile based on length so we get decent strings.
+        # Take the top quartile based on length so we get decent seed strings.
         lines = sorted(lines, key=lambda line: len(line), reverse=True)[:num_seeds]
         lines = list(map(lambda line: line[:max_seed_length].rsplit(maxsplit=1)[0], lines))
         return lines
@@ -184,7 +184,7 @@ class MetaModel:
 
         if seed:
             seed_vector = self.vectorize(seed)
-        else: # If no seed just feed in the most common token from the training data
+        else: # If no seed just feed in the most common token from the training datapick
             seed_vector = np.array([0], dtype=np.int32)
 
         # Feed in seed string
