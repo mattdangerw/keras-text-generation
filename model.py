@@ -43,7 +43,12 @@ class MetaModel:
 
     def vectorize(self, text):
         tokens = self.tokenize(text)
-        indices = list(map(lambda token: self.token_indices[token], tokens))
+        indices = []
+        for token in tokens:
+            if token in self.token_indices:
+                indices.append(self.token_indices[token])
+            else:
+                print_red('Ignoring unrecognized token:', token)
         return np.array(indices, dtype=np.int32)
 
     def unvectorize(self, vector):
