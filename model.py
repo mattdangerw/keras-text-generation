@@ -6,9 +6,10 @@ from keras.models import Sequential, load_model
 import numpy as np
 import os
 import pickle
+import random
 import time
 
-from utils import print_green, print_red, sample_preds, split_words, unsplit_words
+from utils import print_green, print_red, sample_preds, word_tokenize, word_detokenize
 
 # Live samples the model after each epoch, which can be very useful when
 # tweaking parameters and/or dataset
@@ -32,13 +33,19 @@ class MetaModel:
         super().__init__()
 
     def tokenize(self, text):
+        if not self.pristine_input:
+            text = text.lower()
         if self.word_tokens:
-            return split_words(text)
-        return text.lower()
+            if self.pristine_input:
+                return text.split()
+            return word_tokenize(text)
+        return text
 
-    def untokenize(self, tokens):
+    def detokenize(self, tokens):
         if self.word_tokens:
-            return unsplit_words(tokens)
+            if self.pristine_output:
+                return ' '.join(tokens)
+            return word_detokenize(tokens)
         return ''.join(tokens)
 
     def vectorize(self, text):
@@ -53,7 +60,7 @@ class MetaModel:
 
     def unvectorize(self, vector):
         tokens = map(lambda index: self.indices_token[index], vector.tolist())
-        return self.untokenize(tokens)
+        return self.detokenize(tokens)
 
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read()
@@ -103,10 +110,14 @@ class MetaModel:
         keras_model.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
         return keras_model
 
-    def train(self, data_dir, word_tokens, batch_size, seq_length, seq_step, embedding_size, lstm_size, num_layers, num_epochs, skip_sampling):
+    def train(self, data_dir, word_tokens, pristine_input, pristine_output, batch_size, seq_length, seq_step, embedding_size, lstm_size, num_layers, num_epochs, skip_sampling):
         print_green('Loading data...')
         load_start = time.time()
         self.word_tokens = word_tokens
+        self.pristine_input = pristine_input
+        self.pristine_output = pristine_output
+        if self.pristine_input:
+            self.pristine_output = True
         data = self._load_text(data_dir)
 
         self.batch_size = batch_size

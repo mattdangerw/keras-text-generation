@@ -9,6 +9,10 @@ def main():
                         help='data directory containing input.txt')
     parser.add_argument('--word-tokens', action='store_true',
                         help='whether to model the rnn at word level or char level')
+    parser.add_argument('--pristine-input', action='store_true',
+                        help='do not lowercase or attempt fancy tokenization of input')
+    parser.add_argument('--pristine-output', action='store_true',
+                        help='do not detokenize output (word-tokens only)')
     parser.add_argument('--embedding-size', type=int, default=32,
                         help='size of the embedding')
     parser.add_argument('--lstm-size', type=int, default=128,
