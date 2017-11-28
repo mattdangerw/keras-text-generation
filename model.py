@@ -32,7 +32,7 @@ class LiveSamplerCallback(Callback):
 # provides convient train and sample functions.
 class MetaModel:
     def __init__(self):
-        super().__init__()
+        pass
 
     def tokenize(self, text):
         if not self.pristine_input:
