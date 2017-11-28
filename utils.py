@@ -85,7 +85,7 @@ def word_detokenize(tokens):
         (re.compile(r"\b(got)\s(ta)\b"), r'\1\2'),
         (re.compile(r"\b(lem)\s(me)\b"), r'\1\2'),
         (re.compile(r"\b(mor)\s('n)\b"), r'\1\2'),
-        (re.compile(r"\b(wan)\s(na)\b"), r'\1\2')
+        (re.compile(r"\b(wan)\s(na)\b"), r'\1\2'),
         # Ending quotes
         (re.compile(r"([^' ]) ('ll|'re|'ve|n't)\b"), r"\1\2"),
         (re.compile(r"([^' ]) ('s|'m|'d|')\b"), r"\1\2"),
@@ -95,7 +95,7 @@ def word_detokenize(tokens):
         # Parens and brackets
         (re.compile(r'([\[\(\{\<]) '), r'\1'),
         (re.compile(r' ([\]\)\}\>])'), r'\1'),
-        (re.compile(r'([\]\)\}\>]) ([:;,.])'), r'\1\2')
+        (re.compile(r'([\]\)\}\>]) ([:;,.])'), r'\1\2'),
         # Punctuation
         (re.compile(r"([^']) '\b"), r"\1'"),
         (re.compile(r' ([?!\.])'), r'\1'),
