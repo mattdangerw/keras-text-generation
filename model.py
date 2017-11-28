@@ -71,7 +71,7 @@ class MetaModel:
             lines = random.sample(lines, num_seeds * 4)
         # Take the top quartile based on length so we get decent seed strings.
         lines = sorted(lines, key=lambda line: len(line), reverse=True)[:num_seeds]
-        lines = list(map(lambda line: line[:max_seed_length].rsplit(maxsplit=1)[0], lines))
+        lines = list(map(lambda line: line[:max_seed_length].rsplit(None, 1)[0], lines))
         return lines
 
     def _load_text(self, data_dir):
