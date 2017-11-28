@@ -9,7 +9,7 @@ import pickle
 import random
 import time
 
-from utils import print_green, print_red, sample_preds, word_tokenize, word_detokenize
+from utils import print_blue, print_green, print_red, sample_preds, word_tokenize, word_detokenize
 
 # Live samples the model after each epoch, which can be very useful when
 # tweaking parameters and/or dataset
@@ -20,11 +20,11 @@ class LiveSamplerCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         print()
         print_green('Sampling model...')
+        length = 100 if self.meta_model.word_tokens else 500
         for diversity in [0.2, 0.5, 1.0, 1.2]:
-            print('Sampling with diversity', diversity)
-            print('-' * 50)
-            print(self.meta_model.sample())
-            print('-' * 50)
+            print('Using diversity:', diversity)
+            self.meta_model.sample(length=length, diversity=diversity)
+            print('-' *  50)
 
 # We wrap the keras model in our own metaclass that handles text loading,
 # provides convient train and sample functions.
@@ -62,8 +62,19 @@ class MetaModel:
         tokens = map(lambda index: self.indices_token[index], vector.tolist())
         return self.detokenize(tokens)
 
+    def _find_random_seeds(self, text, num_seeds=50, max_seed_length=50):
+        lines = text.split('\n')
+        # Take a random sampling of lines
+        if (len(lines) > num_seeds * 4):
+            lines = random.sample(lines, num_seeds * 4)
+        # Take the top quartile based on length so we get decent strings.
+        lines = sorted(lines, key=lambda line: len(line), reverse=True)[:num_seeds]
+        lines = list(map(lambda line: line[:max_seed_length].rsplit(maxsplit=1)[0], lines))
+        return lines
+
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read()
+        self.seeds = self._find_random_seeds(text)
 
         tokens = self.tokenize(text)
         print('corpus length:', len(tokens))
@@ -158,10 +169,15 @@ class MetaModel:
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
-    def sample(self, seed=None, length=400, temperature=1.0):
+    def sample(self, seed=None, length=500, diversity=1.0):
         self.keras_model.reset_states()
 
-        full_sample = np.array([], dtype=np.int32)
+        if seed is None:
+            seed = random.choice(self.seeds)
+            print('Using seed: ', end='')
+            print_blue(seed)
+            print('-' * 50)
+
         # FIXME: Is there a way to make the current sample smaller not a batch_size vector?
         current_sample=np.zeros((self.batch_size, 1))
         preds = None
@@ -172,20 +188,23 @@ class MetaModel:
             seed_vector = np.array([0], dtype=np.int32)
 
         # Feed in seed string
+        print_blue(seed, end=' ' if self.word_tokens else '')
         for char_index in np.nditer(seed_vector):
             current_sample.fill(char_index)
-            full_sample = np.append(full_sample, char_index)
             preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
 
+        sampled_indices = np.array([], dtype=np.int32)
         # Sample the model one token at a time
         for i in range(length):
             char_index = 0
             if preds is not None:
-                char_index = sample_preds(preds[0][0], temperature)
+                char_index = sample_preds(preds[0][0], diversity)
             current_sample.fill(char_index)
-            full_sample = np.append(full_sample, char_index)
+            sampled_indices = np.append(sampled_indices, char_index)
             preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
-        return self.unvectorize(full_sample)
+        sample = self.unvectorize(sampled_indices)
+        print(sample)
+        return sample
 
     # Don't pickle the keras model, better to save it directly
     def __getstate__(self):

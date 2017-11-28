@@ -11,8 +11,8 @@ def main():
                         help='seed string for sampling')
     parser.add_argument('--length', type=int, default=1000,
                         help='length of the sample to generate')
-    parser.add_argument('--temperature', type=float, default=1.0,
-                        help='Sampling temperature')
+    parser.add_argument('--diversity', type=float, default=1.0,
+                        help='Sampling diversity')
     args = parser.parse_args()
     train(args)
 
