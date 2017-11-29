@@ -112,18 +112,18 @@ class MetaModel:
         return reshuffled
 
     # Builds the underlying keras model
-    def _build_model(self, embedding_size, lstm_size, num_layers):
+    def _build_model(self, embedding_size, rnn_size, num_layers):
         keras_model = Sequential()
         keras_model.add(Embedding(self.vocab_size, embedding_size, batch_size=self.batch_size))
         for layer in range(num_layers):
-            keras_model.add(LSTM(lstm_size, stateful=True, return_sequences=True))
+            keras_model.add(LSTM(rnn_size, stateful=True, return_sequences=True))
         keras_model.add(Dense(self.vocab_size, activation='softmax'))
         # With sparse_categorical_crossentropy we can leave as labels as integers
         # instead of one-hot vectors
         keras_model.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
         return keras_model
 
-    def train(self, data_dir, word_tokens, pristine_input, pristine_output, batch_size, seq_length, seq_step, embedding_size, lstm_size, num_layers, num_epochs, skip_sampling):
+    def train(self, data_dir, word_tokens, pristine_input, pristine_output, batch_size, seq_length, seq_step, embedding_size, rnn_size, num_layers, num_epochs, skip_sampling):
         print_green('Loading data...')
         load_start = time.time()
         self.word_tokens = word_tokens
@@ -149,7 +149,7 @@ class MetaModel:
 
         print_green('Building model...')
         model_start = time.time()
-        self.keras_model = self._build_model(embedding_size, lstm_size, num_layers)
+        self.keras_model = self._build_model(embedding_size, rnn_size, num_layers)
         self.keras_model.summary()
         model_end = time.time()
         print_red('Model build time', model_end - model_start)
