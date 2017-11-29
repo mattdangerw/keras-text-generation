@@ -15,7 +15,7 @@ def main():
                         help='do not lowercase or attempt fancy tokenization of input')
     parser.add_argument('--pristine-output', action='store_true',
                         help='do not detokenize output (word-tokens only)')
-    parser.add_argument('--embedding-size', type=int, default=32,
+    parser.add_argument('--embedding-size', type=int, default=64,
                         help='size of the embedding')
     parser.add_argument('--rnn-size', type=int, default=128,
                         help='size of RNN layers')
@@ -25,7 +25,7 @@ def main():
                         help='minibatch size')
     parser.add_argument('--seq-length', type=int, default=50,
                         help='training sequence length')
-    parser.add_argument('--seq-step', type=int, default=10,
+    parser.add_argument('--seq-step', type=int, default=25,
                         help='how often to pull a training sequence from the data')
     parser.add_argument('--num-epochs', type=int, default=50,
                         help='number of epochs')
