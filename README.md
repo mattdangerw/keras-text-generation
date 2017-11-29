@@ -14,8 +14,18 @@ Quick start
 ```shell
 pip install tensorflow-gpu # Or tensorflow or Theano
 pip install keras colorama
+# Train on the included shakespeare corpus with default parameters
 python train.py
+# Sample the included shakespeare corpus with default parameters
 python samply.py
+# Train with long samples, more layers and more epochs
+python train.py --seq-length 100 --num-layers 4 --num-epochs 100
+# Sample with a random seed for 500 characters and more random output
+python sample.py --length 500 --temperature 2.0
+# Train on a new dataset with a word level model and larger embedding
+python train.py --data-dir ~/datasets/twain --word-tokens --embedding-size 128
+# Sample new dataset with a custom seed
+python sample.py --data-dir ~/datasets/twain  --seed "History doesn't repeat itself, but"
 ```
 
 Usage
