@@ -28,7 +28,7 @@ There are two invokable scripts, `train.py` and `sample.py`, which should be run
  - **model.h5**, keras model weights. Created by train.py and required by sample.py
  - **model.pkl**, model metadata. Created by train.py and required by sample.py
 
-#### train.py
+### train.py
 
  - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
    containing an `input.txt` file.
@@ -50,7 +50,7 @@ There are two invokable scripts, `train.py` and `sample.py`, which should be run
  - **--skip-sampling**, type=flag, default=`False`. Skip the live sampling stage
    of training.
 
-#### sample.py
+### sample.py
 
  - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
    containing a `model.h5` and `model.pkl` file.
@@ -62,20 +62,20 @@ There are two invokable scripts, `train.py` and `sample.py`, which should be run
 FAQ
 ---
 
-##### Why not just use [char-rnn-tensorflow](https://github.com/sherjilozair/char-rnn-tensorflow) or [word-rnn-tensorflow](https://github.com/hunkim/word-rnn-tensorflow)?
+#### Why not just use [char-rnn-tensorflow](https://github.com/sherjilozair/char-rnn-tensorflow) or [word-rnn-tensorflow](https://github.com/hunkim/word-rnn-tensorflow)?
 
 If your goal is just computational speed or low memory footprint, go with those
 projects! Pretty much the appeal here is using Keras. If you want an easy
 declarative language to try new approaches, this is a good place to start.
 
 
-##### Can we add a command line flag for a different optimizer, RNN cell, etc.?
+#### Can we add a command line flag for a different optimizer, RNN cell, etc.?
 
 Most of command line flags exposed are to work with different datasets of
 varying sizes. If you want to change the structure of the RNN, just change the
 code! That's where Keras excels.
 
-##### Can I use a different tokenization scheme for my word level model?
+#### Can I use a different tokenization scheme for my word level model?
 
 Yep! Pass the `--pristine-input` flag and use a fancier tokenizer as a
 preprocessing step. Tokens will be formed by calling `text.split()` on the
