@@ -22,12 +22,47 @@ python samply.py
 Usage
 -----
 
-TODO!
+There are two invokable scripts, `train.py` and `sample.py`, which should be run in succession. Each operates on a
+`data-dir` whose contents are as follows:
+ - **input.txt**, input text corpora. Required by train.py
+ - **model.h5**, keras model weights. Created by train.py and required by sample.py
+ - **model.pkl**, model metadata. Created by train.py and required by sample.py
+
+#### train.py
+
+ - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
+   containing an `input.txt` file.
+ - **--word-tokens**, type=flag, default=`False`. Whether to model the rnn at
+   word level or char level.
+ - **--pristine-input**, type=flag, default=`False`. Do not lowercase or attempt
+   fancy. tokenization of input.
+ - **--pristine-output**, type=flag, default=`False`. Do not detokenize output.
+   Only applies is `--word-tokens` has been set.
+ - **--embedding-size**, type=int, default=`32`. Size of the embedding layer.
+ - **--rnn-size**, type=int, default=`128`. Number of LSTM cells in each RNN
+   layer.
+ - **--num-layers**, type=int, default=`2`. Number of layers in the RNN.
+ - **--batch-size**, type=int, default=`100`. Minibatch size.
+ - **--seq-length**, type=int, default=`50`. Training sequence length.
+ - **--seq-step**, type=int, default=`10`. How often to pull a training sequence
+   from the data.
+ - **--num-epochs**, type=int, default=`50`. Number of epochs.
+ - **--skip-sampling**, type=flag, default=`False`. Skip the live sampling stage
+   of training.
+
+#### sample.py
+
+ - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
+   containing a `model.h5` and `model.pkl` file.
+ - **--seed**, type=string, default=`None`. Seed string for sampling.
+ - **--length**, type=int, default=`1000`. Length of the sample to generate.
+ - **--diversity**, type=float, default=`1.0`. Sampling diversity.
+
 
 FAQ
 ---
 
-##### Why not just use char-rnn-tensorflow or word-rnn-tensorflow?
+##### Why not just use [char-rnn-tensorflow](https://github.com/sherjilozair/char-rnn-tensorflow) or [word-rnn-tensorflow](https://github.com/hunkim/word-rnn-tensorflow)?
 
 If your goal is just computational speed or low memory footprint, go with those
 projects! Pretty much the appeal here is using Keras. If you want an easy
