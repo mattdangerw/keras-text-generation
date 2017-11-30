@@ -14,7 +14,7 @@ def print_green(*args, **kwargs):
     print(colorama.Style.RESET_ALL, end='')
 
 
-def print_blue(*args, **kwargs):
+def print_cyan(*args, **kwargs):
     print(colorama.Fore.CYAN, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')

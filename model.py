@@ -11,7 +11,8 @@ import pickle
 import random
 import time
 
-from utils import print_blue, print_green, print_red, sample_preds, word_tokenize, word_detokenize
+from utils import print_cyan, print_green, print_red
+from utils import sample_preds, word_tokenize, word_detokenize
 
 
 # Live samples the model after each epoch, which can be very useful when
@@ -63,7 +64,7 @@ class MetaModel:
         return np.array(indices, dtype=np.int32)
 
     def unvectorize(self, vector):
-        tokens = map(lambda index: self.indices_token[index], vector.tolist())
+        tokens = [self.indices_token[index] for index in vector.tolist()]
         return self.detokenize(tokens)
 
     def _find_random_seeds(self, text, num_seeds=50, max_seed_length=50):
@@ -71,9 +72,11 @@ class MetaModel:
         # Take a random sampling of lines
         if (len(lines) > num_seeds * 4):
             lines = random.sample(lines, num_seeds * 4)
-        # Take the top quartile based on length so we get decent seed strings.
-        lines = sorted(lines, key=lambda line: len(line), reverse=True)[:num_seeds]
-        lines = list(map(lambda line: line[:max_seed_length].rsplit(None, 1)[0], lines))
+        # Take the top quartile based on length so we get decent seed strings
+        lines = sorted(lines, key=lambda line: len(line), reverse=True)
+        lines = lines[:num_seeds]
+        # Split on the first whitespace before max_seed_length
+        lines = [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
         return lines
 
     def _load_text(self, data_dir):
@@ -91,8 +94,7 @@ class MetaModel:
 
         return self.vectorize(text)
 
-
-    # Reformat our data vector to feed into our model. Tricky with stateful rnns
+    # Reformat our data vector to feed into our model. Tricky with stateful rnn
     def _reshape_for_stateful_rnn(self, sequence):
         passes = []
         # Take strips of our data at every step size up to our seq_length and
@@ -102,31 +104,42 @@ class MetaModel:
             samples = pass_samples.size // self.seq_length
             pass_samples = np.resize(pass_samples, (samples, self.seq_length))
             passes.append(pass_samples)
-        # Stack our samples together and make sure they fit evenly into batches.
+        # Stack our samples together and make sure they fit evenly into batches
         all_samples = np.concatenate(passes)
         num_batches = all_samples.shape[0] // self.batch_size
-        # Now the tricky part, we need to reformat our data so the first sequence in
-        # the nth batch picks up exactly where the first sequence in the (n - 1)th
-        # batch left off, as the lstm cell state will not be reset between batches
-        # in the stateful model.
-        reshuffled = np.zeros((num_batches * self.batch_size, self.seq_length), dtype=np.int32)
+        num_samples = num_batches * self.batch_size
+        # Now the tricky part, we need to reformat our data so the first
+        # sequence in the nth batch picks up exactly where the first sequence
+        # in the (n - 1)th batch left off, as the lstm cell state will not be
+        # reset between batches in the stateful model.
+        reshuffled = np.zeros((num_samples, self.seq_length), dtype=np.int32)
         for batch_index in range(self.batch_size):
-            reshuffled[batch_index::self.batch_size, :] = all_samples[batch_index * num_batches:(batch_index + 1) * num_batches, :]
+            slice_start = batch_index * num_batches
+            slice_end = slice_start + num_batches
+            index_slice = all_samples[slice_start:slice_end, :]
+            reshuffled[batch_index::self.batch_size, :] = index_slice
         return reshuffled
 
     # Builds the underlying keras model
     def _build_model(self, embedding_size, rnn_size, num_layers):
         keras_model = Sequential()
-        keras_model.add(Embedding(self.vocab_size, embedding_size, batch_size=self.batch_size))
+        embedding = Embedding(self.vocab_size,
+                              embedding_size,
+                              batch_size=self.batch_size)
+        keras_model.add(embedding)
         for layer in range(num_layers):
-            keras_model.add(LSTM(rnn_size, stateful=True, return_sequences=True))
+            cell = LSTM(rnn_size, stateful=True, return_sequences=True)
+            keras_model.add(cell)
         keras_model.add(Dense(self.vocab_size, activation='softmax'))
-        # With sparse_categorical_crossentropy we can leave as labels as integers
-        # instead of one-hot vectors
-        keras_model.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
+        # With sparse_categorical_crossentropy we can leave as labels as
+        # integers instead of one-hot vectors
+        keras_model.compile(loss='sparse_categorical_crossentropy',
+                            optimizer='rmsprop')
         return keras_model
 
-    def train(self, data_dir, word_tokens, pristine_input, pristine_output, batch_size, seq_length, seq_step, embedding_size, rnn_size, num_layers, num_epochs, skip_sampling):
+    def train(self, data_dir, word_tokens, pristine_input, pristine_output,
+              batch_size, seq_length, seq_step, embedding_size, rnn_size,
+              num_layers, num_epochs, skip_sampling):
         print_green('Loading data...')
         load_start = time.time()
         self.word_tokens = word_tokens
@@ -141,8 +154,8 @@ class MetaModel:
         self.seq_step = seq_step
         x = self._reshape_for_stateful_rnn(data[:-1])
         y = self._reshape_for_stateful_rnn(data[1:])
-        # Y data needs an extra axis to work with the sparse categorical crossentropy
-        # loss function
+        # Y data needs an extra axis to work with the sparse categorical
+        # crossentropy loss function
         y = y[:, :, np.newaxis]
 
         print('x.shape:', x.shape)
@@ -152,7 +165,8 @@ class MetaModel:
 
         print_green('Building model...')
         model_start = time.time()
-        self.keras_model = self._build_model(embedding_size, rnn_size, num_layers)
+        self.keras_model = self._build_model(embedding_size, rnn_size,
+                                             num_layers)
         self.keras_model.summary()
         model_end = time.time()
         print_red('Model build time', model_end - model_start)
@@ -180,23 +194,22 @@ class MetaModel:
         if seed is None:
             seed = random.choice(self.seeds)
             print('Using seed: ', end='')
-            print_blue(seed)
+            print_cyan(seed)
             print('-' * 50)
 
-        # FIXME: Is there a way to make the current sample smaller not a batch_size vector?
+        # FIXME: Is there a way to make the current sample smaller not a batch
+        # size vector?
         current_sample = np.zeros((self.batch_size, 1))
         preds = None
 
-        if seed:
-            seed_vector = self.vectorize(seed)
-        else:  # If no seed just feed in the most common token from the training datapick
-            seed_vector = np.array([0], dtype=np.int32)
-
         # Feed in seed string
-        print_blue(seed, end=' ' if self.word_tokens else '')
+        print_cyan(seed, end=' ' if self.word_tokens else '')
+        seed_vector = self.vectorize(seed)
         for char_index in np.nditer(seed_vector):
             current_sample.fill(char_index)
-            preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
+            preds = self.keras_model.predict(current_sample,
+                                             batch_size=self.batch_size,
+                                             verbose=0)
 
         sampled_indices = np.array([], dtype=np.int32)
         # Sample the model one token at a time
@@ -206,7 +219,9 @@ class MetaModel:
                 char_index = sample_preds(preds[0][0], diversity)
             current_sample.fill(char_index)
             sampled_indices = np.append(sampled_indices, char_index)
-            preds = self.keras_model.predict(current_sample, batch_size=self.batch_size, verbose=0)
+            preds = self.keras_model.predict(current_sample,
+                                             batch_size=self.batch_size,
+                                             verbose=0)
         sample = self.unvectorize(sampled_indices)
         print(sample)
         return sample

@@ -25,7 +25,7 @@ python sample.py --length 500 --temperature 2.0
 # Train on a new dataset with a word level model and larger embedding
 python train.py --data-dir ~/datasets/twain --word-tokens --embedding-size 128
 # Sample new dataset with a custom seed
-python sample.py --data-dir ~/datasets/twain  --seed "History doesn't repeat itself, but"
+python sample.py --data-dir ~/datasets/twain --seed "History doesn't repeat itself, but"
 ```
 
 Usage
@@ -124,4 +124,4 @@ TODO
 
  - limit vocab size, UNK?? could be useful for mem footprint
  - look into embeddings more
- - lint
+ - shakespeare
