@@ -122,7 +122,6 @@ input.
 TODO
 ----
 
- - requirements.txt?
  - limit vocab size, UNK?? could be useful for mem footprint
  - look into embeddings more
  - lint
