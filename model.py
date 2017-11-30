@@ -13,6 +13,7 @@ import time
 
 from utils import print_blue, print_green, print_red, sample_preds, word_tokenize, word_detokenize
 
+
 # Live samples the model after each epoch, which can be very useful when
 # tweaking parameters and/or dataset
 class LiveSamplerCallback(Callback):
@@ -26,7 +27,8 @@ class LiveSamplerCallback(Callback):
         for diversity in [0.2, 0.5, 1.0, 1.2]:
             print('Using diversity:', diversity)
             self.meta_model.sample(length=length, diversity=diversity)
-            print('-' *  50)
+            print('-' * 50)
+
 
 # We wrap the keras model in our own metaclass that handles text loading,
 # provides convient train and sample functions.
@@ -82,12 +84,13 @@ class MetaModel:
         print('corpus length:', len(tokens))
         token_counts = Counter(tokens)
         tokens = [x[0] for x in token_counts.most_common()]
-        self.token_indices = { x: i for i, x in enumerate(tokens) }
-        self.indices_token = { i: x for i, x in enumerate(tokens) }
+        self.token_indices = {x: i for i, x in enumerate(tokens)}
+        self.indices_token = {i: x for i, x in enumerate(tokens)}
         self.vocab_size = len(tokens)
         print('vocab size:', self.vocab_size)
 
         return self.vectorize(text)
+
 
     # Reformat our data vector to feed into our model. Tricky with stateful rnns
     def _reshape_for_stateful_rnn(self, sequence):
@@ -140,7 +143,7 @@ class MetaModel:
         y = self._reshape_for_stateful_rnn(data[1:])
         # Y data needs an extra axis to work with the sparse categorical crossentropy
         # loss function
-        y = y[:,:,np.newaxis]
+        y = y[:, :, np.newaxis]
 
         print('x.shape:', x.shape)
         print('y.shape:', y.shape)
@@ -160,12 +163,12 @@ class MetaModel:
         callbacks = []
         if not skip_sampling:
             callbacks.append(LiveSamplerCallback(self))
-        history = self.keras_model.fit(x, y,
-            batch_size=self.batch_size,
-            shuffle=False,
-            epochs=num_epochs,
-            verbose=1,
-            callbacks=callbacks)
+        self.keras_model.fit(x, y,
+                             batch_size=self.batch_size,
+                             shuffle=False,
+                             epochs=num_epochs,
+                             verbose=1,
+                             callbacks=callbacks)
 
         self.keras_model.reset_states()
         train_end = time.time()
@@ -181,12 +184,12 @@ class MetaModel:
             print('-' * 50)
 
         # FIXME: Is there a way to make the current sample smaller not a batch_size vector?
-        current_sample=np.zeros((self.batch_size, 1))
+        current_sample = np.zeros((self.batch_size, 1))
         preds = None
 
         if seed:
             seed_vector = self.vectorize(seed)
-        else: # If no seed just feed in the most common token from the training datapick
+        else:  # If no seed just feed in the most common token from the training datapick
             seed_vector = np.array([0], dtype=np.int32)
 
         # Feed in seed string
@@ -214,6 +217,7 @@ class MetaModel:
         del state['keras_model']
         return state
 
+
 # Save the keras model directly and pickle our meta model class
 def save(model, data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
@@ -221,6 +225,7 @@ def save(model, data_dir):
     model.keras_model.save(filepath=keras_file_path)
     pickle.dump(model, open(pickle_file_path, 'wb'))
     print_green('Model saved to', pickle_file_path, keras_file_path)
+
 
 # Load the meta model and restore its internal keras model
 def load(data_dir):

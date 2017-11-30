@@ -4,6 +4,7 @@ import argparse
 
 from model import load
 
+
 def main():
     parser = argparse.ArgumentParser(
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -18,10 +19,12 @@ def main():
     args = parser.parse_args()
     train(args)
 
+
 def train(args):
     model = load(args.data_dir)
     del args.data_dir
     print(model.sample(**vars(args)))
+
 
 if __name__ == '__main__':
     main()

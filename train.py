@@ -4,6 +4,7 @@ import argparse
 
 from model import MetaModel, save
 
+
 def main():
     parser = argparse.ArgumentParser(
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -34,10 +35,12 @@ def main():
     args = parser.parse_args()
     train(args)
 
+
 def train(args):
     model = MetaModel()
     model.train(**vars(args))
     save(model, args.data_dir)
+
 
 if __name__ == '__main__':
     main()
