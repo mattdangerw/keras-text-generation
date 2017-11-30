@@ -14,9 +14,9 @@ Quick start
 ```shell
 pip install tensorflow-gpu # Or tensorflow or Theano
 pip install keras colorama
-# Train on the included shakespeare corpus with default parameters
+# Train on the included Shakespeare corpus with default parameters
 python train.py
-# Sample the included shakespeare corpus with default parameters
+# Sample the included Shakespeare corpus with default parameters
 python samply.py
 # Train with long samples, more layers and more epochs
 python train.py --seq-length 100 --num-layers 4 --num-epochs 100
@@ -32,70 +32,70 @@ Usage
 -----
 
 There are two invokable scripts, `train.py` and `sample.py`, which should be run
-in succession. Each operates on a `data-dir` whose contents are as follows:
+in succession. Each operates on a data directory whose contents are as follows:
 
- - **input.txt**, input text corpora. Required by train.py
- - **model.h5**, keras model weights. Created by train.py and required by sample.py
- - **model.pkl**, model metadata. Created by train.py and required by sample.py
+ - **input.txt**, input text corpora. Required by `train.py`
+ - **model.h5**, keras model weights. Created by `train.py` and required by `sample.py`
+ - **model.pkl**, model metadata. Created by `train.py` and required by `sample.py`
 
 ### train.py
 
- - **--data-dir**, type=string, default=`data/tinyshakespeare`. The data
+ - **--data-dir**, type=string, default=data/tinyshakespeare. The data
    directory containing an `input.txt` file. The text file should contain
    whatever texts you would like to train the RNN on, concatenated into a single
    file. Both the character and word models are by default newline aware, so if
    you files contain hard wrapped prose, you may want to remove the wrapping
    newlines.
- - **--word-tokens**, type=flag, default=`False`. Whether to model the RNN at
+ - **--word-tokens**, type=flag. Whether to model the RNN at
    word level or character level. Under the character level model, we will
    simply lowercase the input text and feed it into the RNN character by
    character. Under the word level model, the input text will be split into
    individual word tokens and each token will be given a separate value before
    being fed into the RNN. The text will be split into words roughly following
    the Penn Treebank approach for word tokenization.
- - **--pristine-input**, type=flag, default=`False`. Do not lowercase the text
+ - **--pristine-input**, type=flag. Do not lowercase the text
    corpora before feeding it into the RNN. In the case of the word level model,
    do not attempt fancy tokenization and just use the `split` function. You
    could use this if you would like to use a different tokenizer as a
    preprocessing step. Implies `--pristine-output`.
- - **--pristine-output**, type=flag, default=`False`. By default under the word
+ - **--pristine-output**, type=flag. By default under the word
    level model we call a function which heuristically tries to "detokenize" the
    RNN output into regular English. If you don't want that pass this flag. Does
    not affect the character level model.
- - **--embedding-size**, type=int, default=`64`. Size of the embedding layer.
+ - **--embedding-size**, type=int, default=64. Size of the embedding layer.
    This can be much lower when using the character level model, and bigger under
    the word level model.
- - **--rnn-size**, type=int, default=`128`. Number of LSTM cells in each RNN
+ - **--rnn-size**, type=int, default=128. Number of LSTM cells in each RNN
    layer.
- - **--num-layers**, type=int, default=`2`. Number of layers in the RNN.
- - **--batch-size**, type=int, default=`100`. Batch size, i.e. how many samples
+ - **--num-layers**, type=int, default=2. Number of layers in the RNN.
+ - **--batch-size**, type=int, default=100. Batch size, i.e. how many samples
    to process in parallel during training.
- - **--seq-length**, type=int, default=`50`. We will split the input text into
-   into individual samples of length `seq-length` before feeding them into the
+ - **--seq-length**, type=int, default=50. We will split the input text into
+   into individual samples of length `--seq-length` before feeding them into the
    RNN. The model will be bad at learning dependencies in the text longer then
-   `seq-length`. Length in characters for the character level model, and words
+   `--seq-length`. Length in characters for the character level model, and words
    for the word level model.
- - **--seq-step**, type=int, default=`25`. We grab samples from the input text
-   semi redundantly every `seq-step` characters (or words). For example, a
-   `seq-length` of 50 and `seq-step` of 25 would pull each character in the text
-   into two separate samples offset from each other by 25 characters.
- - **--num-epochs**, type=int, default=`50`. Number of epochs, i.e. passes over
+ - **--seq-step**, type=int, default=25. We grab samples from the input text
+   semi redundantly every `--seq-step` characters (or words). For example, a
+   `--seq-length` of 50 and `--seq-step` of 25 would pull each character in the
+   text into two separate samples offset from each other by 25 characters.
+ - **--num-epochs**, type=int, default=50. Number of epochs, i.e. passes over
    the entire dataset during training.
- - **--skip-sampling**, type=flag, default=`False`. By default the program will
+ - **--skip-sampling**, type=flag. By default the program will
    output live samples from the model after each epoch. If you want training to
    happen more quickly and quietly, you can skip the sampling.
 
 ### sample.py
 
- - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
+ - **--data-dir**, type=string, default=data/nietzsche. The data directory
    containing `model.h5` and `model.pkl` files generated by `train.py`.
- - **--seed**, type=string, default=`None`. Seed string for sampling. We will
+ - **--seed**, type=string, default=None. Seed string for sampling. We will
    feed in the seed string into the RNN before generating predictions. If no
    seed is supplied we will grab a random seed from the input text.
- - **--length**, type=int, default=`1000`. Length of the sample to generate. For
+ - **--length**, type=int, default=1000. Length of the sample to generate. For
    the character level model this means number of characters, for the word level
    number of words.
- - **--diversity**, type=float, default=`1.0`. Sampling diversity. A diversity
+ - **--diversity**, type=float, default=1.0. Sampling diversity. A diversity
    of < 1.0 will make take conservative guesses from the RNN when generating
    text. A diversity of > 1.0 will make riskier choices when generating text.
 
@@ -106,7 +106,7 @@ FAQ
 
 If your goal is just computational speed or low memory footprint, go with those
 projects! Pretty much the appeal here is using Keras. If you want an easy
-declarative language to try new approaches, this is a good place to start.
+declarative framework to try new approaches, this is a good place to start.
 
 #### Can we add a command line flag for a different optimizer, RNN cell, etc.?
 
