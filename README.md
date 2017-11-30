@@ -40,11 +40,12 @@ in succession. Each operates on a `data-dir` whose contents are as follows:
 
 ### train.py
 
- - **--data-dir**, type=string, default=`data/nietzsche`. The data directory
-   containing an `input.txt` file. The text file should contain whatever texts
-   you would like to train the RNN on, concatenated into a single file. Both the
-   character and word models are by default newline aware, so if you files
-   contain hard wrapped prose, you may want to remove the wrapping newlines.
+ - **--data-dir**, type=string, default=`data/tinyshakespeare`. The data
+   directory containing an `input.txt` file. The text file should contain
+   whatever texts you would like to train the RNN on, concatenated into a single
+   file. Both the character and word models are by default newline aware, so if
+   you files contain hard wrapped prose, you may want to remove the wrapping
+   newlines.
  - **--word-tokens**, type=flag, default=`False`. Whether to model the RNN at
    word level or character level. Under the character level model, we will
    simply lowercase the input text and feed it into the RNN character by
@@ -124,4 +125,3 @@ TODO
 
  - limit vocab size, UNK?? could be useful for mem footprint
  - look into embeddings more
- - shakespeare
