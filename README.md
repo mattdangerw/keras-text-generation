@@ -1,8 +1,17 @@
 Keras Text Generation
 =====================
 
-RNN text generation using python and Keras. Supports both word and character
-level models.
+RNN text generation using python and Keras. Generating text with neural networks
+[is fun](http://karpathy.github.io/2015/05/21/rnn-effectiveness/), and there's
+a ton of projects and standalone scripts to do it.
+
+This project does not have any particularly fancy features, but attempts to be
+a good, well documented place to start playing with text generation withing the
+Keras framework.
+
+Supports both word and character level models. Supports saving a model and model
+metadata to disk for later sampling. Uses stateful RNNs within Keras for more
+efficient sampling.
 
 Requirements
 ------------
@@ -68,7 +77,7 @@ in succession. Each operates on a data directory whose contents are as follows:
  - **--rnn-size**, type=int, default=128. Number of LSTM cells in each RNN
    layer.
  - **--num-layers**, type=int, default=2. Number of layers in the RNN.
- - **--batch-size**, type=int, default=100. Batch size, i.e. how many samples
+ - **--batch-size**, type=int, default=32. Batch size, i.e. how many samples
    to process in parallel during training.
  - **--seq-length**, type=int, default=50. We will split the input text into
    into individual samples of length `--seq-length` before feeding them into the
@@ -112,7 +121,7 @@ declarative framework to try new approaches, this is a good place to start.
 
 Most of command line flags exposed are to work with different datasets of
 varying sizes. If you want to change the structure of the RNN, just change the
-code! That's where Keras excels.
+code. That's where Keras excels.
 
 #### Can I use a different tokenization scheme for my word level model?
 

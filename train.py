@@ -22,7 +22,7 @@ def main():
                         help='size of RNN layers')
     parser.add_argument('--num-layers', type=int, default=2,
                         help='number of layers in the RNN')
-    parser.add_argument('--batch-size', type=int, default=100,
+    parser.add_argument('--batch-size', type=int, default=32,
                         help='minibatch size')
     parser.add_argument('--seq-length', type=int, default=50,
                         help='training sequence length')

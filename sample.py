@@ -8,7 +8,7 @@ from model import load
 def main():
     parser = argparse.ArgumentParser(
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--data-dir', type=str, default='data/nietzsche',
+    parser.add_argument('--data-dir', type=str, default='data/tinyshakespeare',
                         help='data directory containing input.txt')
     parser.add_argument('--seed', type=str, default=None,
                         help='seed string for sampling')
