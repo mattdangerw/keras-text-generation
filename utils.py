@@ -26,6 +26,8 @@ def print_red(*args, **kwargs):
     print(colorama.Style.RESET_ALL, end='')
 
 
+# Samples an unnormalized array of probabilities. Use temperature to
+# flatten/amplify the probabilities.
 def sample_preds(preds, temperature=1.0):
     preds = np.asarray(preds).astype('float64')
     # FIXME: sometimes this will be a log of zero and make numpy complain

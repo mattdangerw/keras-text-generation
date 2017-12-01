@@ -67,6 +67,7 @@ class MetaModel:
         tokens = [self.indices_token[index] for index in vector.tolist()]
         return self.detokenize(tokens)
 
+    # Heuristic attempt to find some good seed strings in the input text
     def _find_random_seeds(self, text, num_seeds=50, max_seed_length=50):
         lines = text.split('\n')
         # Take a random sampling of lines
@@ -79,6 +80,7 @@ class MetaModel:
         lines = [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
         return lines
 
+    # Reads in the input text and converts to a vector
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read()
         self.seeds = self._find_random_seeds(text)
@@ -86,6 +88,7 @@ class MetaModel:
         tokens = self.tokenize(text)
         print('corpus length:', len(tokens))
         token_counts = Counter(tokens)
+        # Sort so most common tokens come first in our vocabulary
         tokens = [x[0] for x in token_counts.most_common()]
         self.token_indices = {x: i for i, x in enumerate(tokens)}
         self.indices_token = {i: x for i, x in enumerate(tokens)}
@@ -114,9 +117,11 @@ class MetaModel:
         # reset between batches in the stateful model.
         reshuffled = np.zeros((num_samples, self.seq_length), dtype=np.int32)
         for batch_index in range(self.batch_size):
+            # Take a slice of num_batches consecutive samples
             slice_start = batch_index * num_batches
             slice_end = slice_start + num_batches
             index_slice = all_samples[slice_start:slice_end, :]
+            # Spread it across each of our batches in the same index position
             reshuffled[batch_index::self.batch_size, :] = index_slice
         return reshuffled
 
@@ -140,18 +145,19 @@ class MetaModel:
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
               num_layers, num_epochs, skip_sampling):
-        print_green('Loading data...')
-        load_start = time.time()
+        # Store metadata we also need for sampling...
         self.word_tokens = word_tokens
         self.pristine_input = pristine_input
         self.pristine_output = pristine_output
         if self.pristine_input:
             self.pristine_output = True
-        data = self._load_text(data_dir)
-
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.seq_step = seq_step
+
+        print_green('Loading data...')
+        load_start = time.time()
+        data = self._load_text(data_dir)
         x = self._reshape_for_stateful_rnn(data[:-1])
         y = self._reshape_for_stateful_rnn(data[1:])
         # Y data needs an extra axis to work with the sparse categorical
