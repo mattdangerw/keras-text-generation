@@ -29,8 +29,9 @@ def print_red(*args, **kwargs):
 # Samples an unnormalized array of probabilities. Use temperature to
 # flatten/amplify the probabilities.
 def sample_preds(preds, temperature=1.0):
-    preds = np.asarray(preds).astype('float64')
-    # FIXME: sometimes this will be a log of zero and make numpy complain
+    preds = np.asarray(preds).astype(np.float64)
+    # Add a tiny positive number to avoid invalid log(0)
+    preds += np.finfo(np.float64).tiny
     preds = np.log(preds) / temperature
     exp_preds = np.exp(preds)
     preds = exp_preds / np.sum(exp_preds)
