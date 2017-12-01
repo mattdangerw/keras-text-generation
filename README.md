@@ -1,17 +1,18 @@
 Keras Text Generation
 =====================
 
-RNN text generation using python and Keras. Generating text with neural networks
-[is fun](http://karpathy.github.io/2015/05/21/rnn-effectiveness/), and there's
-a ton of projects and standalone scripts to do it.
+Recurrent neural network (RNN) text generation using Keras. Generating text with
+neural networks [is fun](http://karpathy.github.io/2015/05/21/rnn-effectiveness/),
+and there are a ton of projects and standalone scripts to do it.
 
-This project does not have any particularly fancy features, but attempts to be
-a good, well documented place to start playing with text generation withing the
-Keras framework.
+This project does not provide any groundbreaking features over what it already
+out there, but attempts to be a good, well documented place to start playing
+with text generation within the Keras framework. It handles the nitty-gritty
+details of loading a text corpus and feeding it into a Keras model.
 
-Supports both word and character level models. Supports saving a model and model
-metadata to disk for later sampling. Uses stateful RNNs within Keras for more
-efficient sampling.
+Supports both a character-level model and a word-level model (with tokenization).
+Supports saving a model and model metadata to disk for later sampling. Uses
+stateful RNNs within Keras for more efficient sampling.
 
 Requirements
 ------------
@@ -43,34 +44,36 @@ Usage
 There are two invokable scripts, `train.py` and `sample.py`, which should be run
 in succession. Each operates on a data directory whose contents are as follows:
 
- - **input.txt**, input text corpora. Required by `train.py`
- - **model.h5**, keras model weights. Created by `train.py` and required by `sample.py`
- - **model.pkl**, model metadata. Created by `train.py` and required by `sample.py`
+- **input.txt**, input text corpora. Required by `train.py`
+- **model.h5**, keras model weights. Created by `train.py` and required by `sample.py`
+- **model.pkl**, model metadata. Created by `train.py` and required by `sample.py`
+
+The `input.txt` file should contain whatever texts you would like to train the
+RNN on, concatenated into a single file. The text processing is by default
+newline aware, so if you files contain hard wrapped prose, you may want to
+remove the wrapping newlines.
+
+There are two main modes to process the input--a character-level model and
+a word-level model. Under the character level model, we will simply lowercase
+the input text and feed it into the RNN character by character. Under the word
+level model, the input text will be split into individual word tokens and each
+token will be given a separate value before being fed into the RNN. Word will be
+tokenized roughly following the Penn Treebank approach. By default we will
+hueristically attempt to "detokenize" the text after sampling, but this can be
+disabled.
 
 ### train.py
 
- - **--data-dir**, type=string, default=data/tinyshakespeare. The data
-   directory containing an `input.txt` file. The text file should contain
-   whatever texts you would like to train the RNN on, concatenated into a single
-   file. Both the character and word models are by default newline aware, so if
-   you files contain hard wrapped prose, you may want to remove the wrapping
-   newlines.
- - **--word-tokens**, type=flag. Whether to model the RNN at
-   word level or character level. Under the character level model, we will
-   simply lowercase the input text and feed it into the RNN character by
-   character. Under the word level model, the input text will be split into
-   individual word tokens and each token will be given a separate value before
-   being fed into the RNN. The text will be split into words roughly following
-   the Penn Treebank approach for word tokenization.
- - **--pristine-input**, type=flag. Do not lowercase the text
-   corpora before feeding it into the RNN. In the case of the word level model,
-   do not attempt fancy tokenization and just use the `split` function. You
-   could use this if you would like to use a different tokenizer as a
+ - **--data-dir**, type=string, default=data/tinyshakespeare. The data directory
+   containing an `input.txt` file.
+ - **--word-tokens**, type=flag. Whether to model the RNN at a word level or a
+   a character level.
+ - **--pristine-input**, type=flag. For character models, do not lowercase the
+   text corpora before feeding it into the RNN. For word models, do not attempt
+   fancy tokenization. You can pass this this to use your own tokenizer as a
    preprocessing step. Implies `--pristine-output`.
- - **--pristine-output**, type=flag. By default under the word
-   level model we call a function which heuristically tries to "detokenize" the
-   RNN output into regular English. If you don't want that pass this flag. Does
-   not affect the character level model.
+ - **--pristine-output**, type=flag. For word models, do not attempt to
+   "detokenize" the output.
  - **--embedding-size**, type=int, default=64. Size of the embedding layer.
    This can be much lower when using the character level model, and bigger under
    the word level model.
@@ -82,8 +85,7 @@ in succession. Each operates on a data directory whose contents are as follows:
  - **--seq-length**, type=int, default=50. We will split the input text into
    into individual samples of length `--seq-length` before feeding them into the
    RNN. The model will be bad at learning dependencies in the text longer then
-   `--seq-length`. Length in characters for the character level model, and words
-   for the word level model.
+   `--seq-length`.
  - **--seq-step**, type=int, default=25. We grab samples from the input text
    semi redundantly every `--seq-step` characters (or words). For example, a
    `--seq-length` of 50 and `--seq-step` of 25 would pull each character in the
@@ -91,19 +93,17 @@ in succession. Each operates on a data directory whose contents are as follows:
  - **--num-epochs**, type=int, default=50. Number of epochs, i.e. passes over
    the entire dataset during training.
  - **--skip-sampling**, type=flag. By default the program will
-   output live samples from the model after each epoch. If you want training to
-   happen more quickly and quietly, you can skip the sampling.
+   output live samples from the model after each epoch. Pass this flag to
+   disable.
 
 ### sample.py
 
- - **--data-dir**, type=string, default=data/nietzsche. The data directory
+ - **--data-dir**, type=string, default=data/tinyshakespeare. The data directory
    containing `model.h5` and `model.pkl` files generated by `train.py`.
- - **--seed**, type=string, default=None. Seed string for sampling. We will
-   feed in the seed string into the RNN before generating predictions. If no
-   seed is supplied we will grab a random seed from the input text.
+ - **--seed**, type=string, default=None. Seed string for sampling. If no seed
+   is supplied we will grab a random seed from the input text.
  - **--length**, type=int, default=1000. Length of the sample to generate. For
-   the character level model this means number of characters, for the word level
-   number of words.
+   the word level model this is length in words.
  - **--diversity**, type=float, default=1.0. Sampling diversity. A diversity
    of < 1.0 will make take conservative guesses from the RNN when generating
    text. A diversity of > 1.0 will make riskier choices when generating text.
@@ -128,9 +128,3 @@ code. That's where Keras excels.
 Yep! Pass the `--pristine-input` flag and use a fancier tokenizer as a
 preprocessing step. Tokens will be formed by calling `text.split()` on the
 input.
-
-TODO
-----
-
- - limit vocab size, UNK?? could be useful for mem footprint
- - look into embeddings more
