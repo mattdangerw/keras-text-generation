@@ -7,29 +7,37 @@ import re
 
 colorama.init()
 
+
 def print_green(*args, **kwargs):
     print(colorama.Fore.GREEN, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
 
-def print_blue(*args, **kwargs):
+
+def print_cyan(*args, **kwargs):
     print(colorama.Fore.CYAN, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
+
 
 def print_red(*args, **kwargs):
     print(colorama.Fore.RED, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
 
+
+# Samples an unnormalized array of probabilities. Use temperature to
+# flatten/amplify the probabilities.
 def sample_preds(preds, temperature=1.0):
-    preds = np.asarray(preds).astype('float64')
-    # FIXME: sometimes this will be a log of zero and make numpy complain
+    preds = np.asarray(preds).astype(np.float64)
+    # Add a tiny positive number to avoid invalid log(0)
+    preds += np.finfo(np.float64).tiny
     preds = np.log(preds) / temperature
     exp_preds = np.exp(preds)
     preds = exp_preds / np.sum(exp_preds)
     probas = np.random.multinomial(1, preds, 1)
     return np.argmax(probas)
+
 
 # Basic word tokenizer based on the Penn Treebank tokenization script, but
 # setup to handle multiple sentences. Newline aware, i.e. newlines are replaced
@@ -72,6 +80,7 @@ def word_tokenize(text):
     for regexp, substitution in REGEXES:
         text = regexp.sub(substitution, text)
     return text.split()
+
 
 # A hueristic attempt to undo the Penn Treebank tokenization above. Pass the
 # --pristine-output flag if no attempt at detokenizing is desired.

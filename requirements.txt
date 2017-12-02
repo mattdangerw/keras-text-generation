@@ -1,0 +1,2 @@
+colorama==0.3
+Keras==2.0
