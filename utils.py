@@ -61,7 +61,7 @@ def word_tokenize(text):
         (re.compile(r'--'), r' -- '),
         # Ending quotes
         (re.compile(r'"'), r' ” '),
-        (re.compile(r"([^' ])('s|'m|'d|') "), r"\1 \2 "),
+        (re.compile(r"([^' ])('s|'m|'d) "), r"\1 \2 "),
         (re.compile(r"([^' ])('ll|'re|'ve|n't) "), r"\1 \2 "),
         # Contractions
         (re.compile(r"\b(can)(not)\b"), r' \1 \2 '),
@@ -99,7 +99,7 @@ def word_detokenize(tokens):
         (re.compile(r"\b(wan)\s(na)\b"), r'\1\2'),
         # Ending quotes
         (re.compile(r"([^' ]) ('ll|'re|'ve|n't)\b"), r"\1\2"),
-        (re.compile(r"([^' ]) ('s|'m|'d|')\b"), r"\1\2"),
+        (re.compile(r"([^' ]) ('s|'m|'d)\b"), r"\1\2"),
         (re.compile(r'[ ]?”'), r'"'),
         # Double dashes
         (re.compile(r'[ ]?--[ ]?'), r'--'),
@@ -108,7 +108,7 @@ def word_detokenize(tokens):
         (re.compile(r' ([\]\)\}\>])'), r'\1'),
         (re.compile(r'([\]\)\}\>]) ([:;,.])'), r'\1\2'),
         # Punctuation
-        (re.compile(r"([^']) '\b"), r"\1'"),
+        (re.compile(r"([^']) ' "), r"\1' "),
         (re.compile(r' ([?!\.])'), r'\1'),
         (re.compile(r'([^\.])\s(\.)([\]\)}>"\']*)\s*$'), r'\1\2\3'),
         (re.compile(r'([#$]) '), r'\1'),
