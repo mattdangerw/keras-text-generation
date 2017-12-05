@@ -24,6 +24,7 @@ class LiveSamplerCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         print()
         print_green('Sampling model...')
+        self.meta_model.update_sample_model_weights()
         length = 100 if self.meta_model.word_tokens else 500
         for diversity in [0.2, 0.5, 1.0, 1.2]:
             print('Using diversity:', diversity)
@@ -143,7 +144,16 @@ class MetaModel:
         model.compile(loss='sparse_categorical_crossentropy',
                       optimizer='rmsprop')
         model.summary()
-        self.keras_model = model
+
+        # Keep a separate model with batch_size 1 for training
+        self.train_model = model
+        config = model.get_config()
+        config[0]['config']['batch_input_shape'] = (1, None)
+        self.sample_model = Sequential.from_config(config)
+        self.sample_model.trainable = False
+
+    def update_sample_model_weights(self):
+        self.sample_model.set_weights(self.train_model.get_weights())
 
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
@@ -182,19 +192,18 @@ class MetaModel:
         callbacks = []
         if not skip_sampling:
             callbacks.append(LiveSamplerCallback(self))
-        self.keras_model.fit(x, y,
+        self.train_model.fit(x, y,
                              batch_size=self.batch_size,
                              shuffle=False,
                              epochs=num_epochs,
                              verbose=1,
                              callbacks=callbacks)
-
-        self.keras_model.reset_states()
+        self.update_sample_model_weights()
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
     def sample(self, seed=None, length=500, diversity=1.0):
-        self.keras_model.reset_states()
+        self.sample_model.reset_states()
 
         if seed is None:
             seed = random.choice(self.seeds)
@@ -202,19 +211,14 @@ class MetaModel:
             print_cyan(seed)
             print('-' * 50)
 
-        # FIXME: Is there a way to make the current sample smaller not a batch
-        # size vector?
-        current_sample = np.zeros((self.batch_size, 1))
         preds = None
 
         # Feed in seed string
         print_cyan(seed, end=' ' if self.word_tokens else '')
         seed_vector = self.vectorize(seed)
         for char_index in np.nditer(seed_vector):
-            current_sample.fill(char_index)
-            preds = self.keras_model.predict(current_sample,
-                                             batch_size=self.batch_size,
-                                             verbose=0)
+            preds = self.sample_model.predict(np.array([[char_index]]),
+                                              verbose=0)
 
         sampled_indices = np.array([], dtype=np.int32)
         # Sample the model one token at a time
@@ -222,19 +226,18 @@ class MetaModel:
             char_index = 0
             if preds is not None:
                 char_index = sample_preds(preds[0][0], diversity)
-            current_sample.fill(char_index)
             sampled_indices = np.append(sampled_indices, char_index)
-            preds = self.keras_model.predict(current_sample,
-                                             batch_size=self.batch_size,
-                                             verbose=0)
+            preds = self.sample_model.predict(np.array([[char_index]]),
+                                              verbose=0)
         sample = self.unvectorize(sampled_indices)
         print(sample)
         return sample
 
-    # Don't pickle the keras model, better to save it directly
+    # Don't pickle the keras models, better to save directly
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['keras_model']
+        del state['train_model']
+        del state['sample_model']
         return state
 
 
@@ -242,7 +245,7 @@ class MetaModel:
 def save(model, data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
-    model.keras_model.save(filepath=keras_file_path)
+    model.sample_model.save(filepath=keras_file_path)
     pickle.dump(model, open(pickle_file_path, 'wb'))
     print_green('Model saved to', pickle_file_path, keras_file_path)
 
@@ -252,5 +255,5 @@ def load(data_dir):
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
     model = pickle.load(open(pickle_file_path, 'rb'))
-    model.keras_model = load_model(keras_file_path)
+    model.sample_model = load_model(keras_file_path)
     return model
