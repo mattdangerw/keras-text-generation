@@ -78,12 +78,12 @@ class MetaModel:
         lines = lines[:num_seeds]
         # Split on the first whitespace before max_seed_length
         lines = [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
-        return lines
+        self.seeds = lines
 
     # Reads in the input text and converts to a vector
     def _load_text(self, data_dir):
         text = open(os.path.join(data_dir, 'input.txt')).read()
-        self.seeds = self._find_random_seeds(text)
+        self._find_random_seeds(text)
 
         tokens = self.tokenize(text)
         print('corpus length:', len(tokens))
@@ -100,12 +100,13 @@ class MetaModel:
     # Reformat our data vector to feed into our model. Tricky with stateful rnn
     def _reshape_for_stateful_rnn(self, sequence):
         passes = []
-        # Take strips of our data at every step size up to our seq_length and
-        # cut those strips into seq_length sequences
+        # Take strips of our data at seq_step intervals up to our seq_length
+        # and cut those strips into seq_length sequences
         for offset in range(0, self.seq_length, self.seq_step):
             pass_samples = sequence[offset:]
-            samples = pass_samples.size // self.seq_length
-            pass_samples = np.resize(pass_samples, (samples, self.seq_length))
+            num_pass_samples = pass_samples.size // self.seq_length
+            pass_samples = np.resize(pass_samples,
+                                     (num_pass_samples, self.seq_length))
             passes.append(pass_samples)
         # Stack our samples together and make sure they fit evenly into batches
         all_samples = np.concatenate(passes)
@@ -150,9 +151,7 @@ class MetaModel:
         # Store metadata we also need for sampling...
         self.word_tokens = word_tokens
         self.pristine_input = pristine_input
-        self.pristine_output = pristine_output
-        if self.pristine_input:
-            self.pristine_output = True
+        self.pristine_output = pristine_input or pristine_output
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.seq_step = seq_step
