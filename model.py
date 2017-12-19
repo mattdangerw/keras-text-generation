@@ -8,8 +8,8 @@ import sys
 import time
 
 from keras.callbacks import Callback
-from keras.layers import Dense, Dropout, Embedding, LSTM, TimeDistributed
-from keras.models import load_model, Sequential
+from keras.layers import Dense, Dropout, Embedding, Input, LSTM, TimeDistributed
+from keras.models import load_model, Model
 import numpy as np
 
 from vectorizer import Vectorizer
@@ -29,7 +29,6 @@ class LiveSamplerCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         print()
         print_green('Sampling model...')
-        self.meta_model.update_sample_model_weights()
         for diversity in [0.2, 0.5, 1.0, 1.2]:
             print('Using diversity:', diversity)
             self.meta_model.sample(diversity=diversity)
@@ -89,34 +88,29 @@ class MetaModel:
 
     # Builds the underlying keras model
     def _build_models(self, batch_size, embedding_size, rnn_size, num_layers):
-        model = Sequential()
-        model.add(Embedding(self.vectorizer.vocab_size,
-                            embedding_size,
-                            batch_input_shape=(batch_size, None)))
+        inputs = Input(batch_shape=(batch_size, None))
+        outputs = Embedding(self.vectorizer.vocab_size, embedding_size)(inputs)
         for layer in range(num_layers):
-            model.add(LSTM(rnn_size,
+            outputs = LSTM(rnn_size,
                            stateful=True,
-                           return_sequences=True))
-            model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(self.vectorizer.vocab_size,
-                                        activation='softmax')))
+                           return_sequences=True)(outputs)
+            outputs = Dropout(0.2)(outputs)
+        outputs=TimeDistributed(Dense(self.vectorizer.vocab_size,
+                                        activation='softmax'))(outputs)
         # With sparse_categorical_crossentropy we can leave as labels as
         # integers instead of one-hot vectors
-        model.compile(loss='sparse_categorical_crossentropy',
-                      optimizer='rmsprop',
-                      metrics=['accuracy'])
-        model.summary()
+        self.train_model = Model(inputs, outputs)
+        self.train_model.compile(loss='sparse_categorical_crossentropy',
+                                 optimizer='rmsprop',
+                                 metrics=['accuracy'])
+        self.train_model.summary()
 
-        # Keep a separate model with batch_size 1 for training
-        self.train_model = model
-        config = model.get_config()
-        config[0]['config']['batch_input_shape'] = (1, None)
-        self.sample_model = Sequential.from_config(config)
+        # Keep a separate model with batch_size 1 for sampling
+        sample_inputs = Input(batch_shape=(1, None))
+        sample_outpus = self.train_model(sample_inputs)
+        self.sample_model = Model(sample_inputs, sample_outpus)
         self.sample_model.trainable = False
-
-    def update_sample_model_weights(self):
-        """Sync training and sampling model weights"""
-        self.sample_model.set_weights(self.train_model.get_weights())
+        self.sample_model.summary()
 
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
@@ -147,7 +141,6 @@ class MetaModel:
                              epochs=num_epochs,
                              verbose=1,
                              callbacks=callbacks)
-        self.update_sample_model_weights()
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
