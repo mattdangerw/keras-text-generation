@@ -41,9 +41,6 @@ class MetaModel:
         self.word_tokens = False
         self.pristine_input = False
         self.pristine_output = False
-        self.batch_size = 0
-        self.seq_length = 0
-        self.seq_step = 0
         self.train_model = None
         self.sample_model = None
         self.seeds = None
@@ -112,40 +109,41 @@ class MetaModel:
         return self.vectorize(text)
 
     # Reformat our data vector to feed into our model. Tricky with stateful rnn
-    def _reshape_for_stateful_rnn(self, sequence):
+    def _reshape_for_stateful_rnn(self, sequence, batch_size,
+                                  seq_length, seq_step):
         passes = []
         # Take strips of our data at seq_step intervals up to our seq_length
         # and cut those strips into seq_length sequences
-        for offset in range(0, self.seq_length, self.seq_step):
+        for offset in range(0, seq_length, seq_step):
             pass_samples = sequence[offset:]
-            num_pass_samples = pass_samples.size // self.seq_length
+            num_pass_samples = pass_samples.size // seq_length
             pass_samples = np.resize(pass_samples,
-                                     (num_pass_samples, self.seq_length))
+                                     (num_pass_samples, seq_length))
             passes.append(pass_samples)
         # Stack our samples together and make sure they fit evenly into batches
         all_samples = np.concatenate(passes)
-        num_batches = all_samples.shape[0] // self.batch_size
-        num_samples = num_batches * self.batch_size
+        num_batches = all_samples.shape[0] // batch_size
+        num_samples = num_batches * batch_size
         # Now the tricky part, we need to reformat our data so the first
         # sequence in the nth batch picks up exactly where the first sequence
         # in the (n - 1)th batch left off, as the lstm cell state will not be
         # reset between batches in the stateful model.
-        reshuffled = np.zeros((num_samples, self.seq_length), dtype=np.int32)
-        for batch_index in range(self.batch_size):
+        reshuffled = np.zeros((num_samples, seq_length), dtype=np.int32)
+        for batch_index in range(batch_size):
             # Take a slice of num_batches consecutive samples
             slice_start = batch_index * num_batches
             slice_end = slice_start + num_batches
             index_slice = all_samples[slice_start:slice_end, :]
             # Spread it across each of our batches in the same index position
-            reshuffled[batch_index::self.batch_size, :] = index_slice
+            reshuffled[batch_index::batch_size, :] = index_slice
         return reshuffled
 
     # Builds the underlying keras model
-    def _build_models(self, embedding_size, rnn_size, num_layers):
+    def _build_models(self, batch_size, embedding_size, rnn_size, num_layers):
         model = Sequential()
         model.add(Embedding(self.vocab_size,
                             embedding_size,
-                            batch_input_shape=(self.batch_size, None)))
+                            batch_input_shape=(batch_size, None)))
         for layer in range(num_layers):
             model.add(LSTM(rnn_size,
                            stateful=True,
@@ -175,15 +173,14 @@ class MetaModel:
         self.word_tokens = word_tokens
         self.pristine_input = pristine_input
         self.pristine_output = pristine_input or pristine_output
-        self.batch_size = batch_size
-        self.seq_length = seq_length
-        self.seq_step = seq_step
 
         print_green('Loading data...')
         load_start = time.time()
         data = self._load_text(data_dir)
-        x = self._reshape_for_stateful_rnn(data[:-1])
-        y = self._reshape_for_stateful_rnn(data[1:])
+        x = self._reshape_for_stateful_rnn(data[:-1], batch_size,
+                                           seq_length, seq_step)
+        y = self._reshape_for_stateful_rnn(data[1:], batch_size,
+                                           seq_length, seq_step)
         # Y data needs an extra axis to work with the sparse categorical
         # crossentropy loss function
         y = y[:, :, np.newaxis]
@@ -195,7 +192,7 @@ class MetaModel:
 
         print_green('Building model...')
         model_start = time.time()
-        self._build_models(embedding_size, rnn_size, num_layers)
+        self._build_models(batch_size, embedding_size, rnn_size, num_layers)
         model_end = time.time()
         print_red('Model build time', model_end - model_start)
 
@@ -206,7 +203,7 @@ class MetaModel:
         if not skip_sampling:
             callbacks.append(LiveSamplerCallback(self))
         self.train_model.fit(x, y,
-                             batch_size=self.batch_size,
+                             batch_size=batch_size,
                              shuffle=False,
                              epochs=num_epochs,
                              verbose=1,
