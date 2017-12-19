@@ -2,14 +2,15 @@
 
 from __future__ import print_function
 from collections import Counter
-from keras.callbacks import Callback
-from keras.layers import Dense, Embedding, LSTM, TimeDistributed
-from keras.models import Sequential, load_model
-import numpy as np
 import os
 import pickle
 import random
 import time
+
+from keras.callbacks import Callback
+from keras.layers import Dense, Embedding, LSTM, TimeDistributed
+from keras.models import load_model, Sequential
+import numpy as np
 
 from utils import print_cyan, print_green, print_red
 from utils import sample_preds, word_tokenize, word_detokenize
@@ -19,9 +20,10 @@ from utils import sample_preds, word_tokenize, word_detokenize
 # tweaking parameters and/or dataset
 class LiveSamplerCallback(Callback):
     def __init__(self, meta_model):
+        super(LiveSamplerCallback, self).__init__()
         self.meta_model = meta_model
 
-    def on_epoch_end(self, epoch, logs={}):
+    def on_epoch_end(self, epoch, logs=None):
         print()
         print_green('Sampling model...')
         self.meta_model.update_sample_model_weights()
@@ -36,7 +38,18 @@ class LiveSamplerCallback(Callback):
 # provides convient train and sample functions.
 class MetaModel:
     def __init__(self):
-        pass
+        self.word_tokens = False
+        self.pristine_input = False
+        self.pristine_output = False
+        self.batch_size = 0
+        self.seq_length = 0
+        self.seq_step = 0
+        self.train_model = None
+        self.sample_model = None
+        self.seeds = None
+        self.token_indices = None
+        self.indices_token = None
+        self.vocab_size = 0
 
     def tokenize(self, text):
         if not self.pristine_input:
@@ -72,10 +85,10 @@ class MetaModel:
     def _find_random_seeds(self, text, num_seeds=50, max_seed_length=50):
         lines = text.split('\n')
         # Take a random sampling of lines
-        if (len(lines) > num_seeds * 4):
+        if len(lines) > num_seeds * 4:
             lines = random.sample(lines, num_seeds * 4)
         # Take the top quartile based on length so we get decent seed strings
-        lines = sorted(lines, key=lambda line: len(line), reverse=True)
+        lines = sorted(lines, key=len, reverse=True)
         lines = lines[:num_seeds]
         # Split on the first whitespace before max_seed_length
         lines = [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
