@@ -19,7 +19,7 @@ def main():
 
     model = load(args.data_dir)
     del args.data_dir
-    print(model.sample(**vars(args)))
+    model.sample(**vars(args))
 
 
 if __name__ == '__main__':
