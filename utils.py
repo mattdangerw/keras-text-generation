@@ -11,26 +11,31 @@ colorama.init()
 
 
 def print_green(*args, **kwargs):
+    """Prints green text to terminal"""
     print(colorama.Fore.GREEN, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
 
 
 def print_cyan(*args, **kwargs):
+    """Prints cyan text to terminal"""
     print(colorama.Fore.CYAN, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
 
 
 def print_red(*args, **kwargs):
+    """Prints red text to terminal"""
     print(colorama.Fore.RED, end='')
     print(*args, **kwargs)
     print(colorama.Style.RESET_ALL, end='')
 
 
-# Samples an unnormalized array of probabilities. Use temperature to
-# flatten/amplify the probabilities.
 def sample_preds(preds, temperature=1.0):
+    """
+    Samples an unnormalized array of probabilities. Use temperature to
+    flatten/amplify the probabilities.
+    """
     preds = np.asarray(preds).astype(np.float64)
     # Add a tiny positive number to avoid invalid log(0)
     preds += np.finfo(np.float64).tiny
@@ -41,11 +46,13 @@ def sample_preds(preds, temperature=1.0):
     return np.argmax(probas)
 
 
-# Basic word tokenizer based on the Penn Treebank tokenization script, but
-# setup to handle multiple sentences. Newline aware, i.e. newlines are replaced
-# with a specific token. You may want to consider using a more robust tokenizer
-# as a preprocessing step, and using the --pristine-input flag.
 def word_tokenize(text):
+    """
+    Basic word tokenizer based on the Penn Treebank tokenization script, but
+    setup to handle multiple sentences. Newline aware, i.e. newlines are
+    replaced with a specific token. You may want to consider using a more robust
+    tokenizer as a preprocessing step, and using the --pristine-input flag.
+    """
     regexes = [
         # Starting quotes
         (re.compile(r'(\s)"'), r'\1 “ '),
@@ -84,9 +91,11 @@ def word_tokenize(text):
     return text.split()
 
 
-# A hueristic attempt to undo the Penn Treebank tokenization above. Pass the
-# --pristine-output flag if no attempt at detokenizing is desired.
 def word_detokenize(tokens):
+    """
+    A hueristic attempt to undo the Penn Treebank tokenization above. Pass the
+    --pristine-output flag if no attempt at detokenizing is desired.
+    """
     regexes = [
         # Newlines
         (re.compile(r'[ ]?\\n[ ]?'), r'\n'),
@@ -125,8 +134,8 @@ def word_detokenize(tokens):
     return text.strip()
 
 
-# Heuristic attempt to find some good seed strings in the input text
 def find_random_seeds(text, num_seeds=50, max_seed_length=50):
+    """Heuristic attempt to find some good seed strings in the input text"""
     lines = text.split('\n')
     # Take a random sampling of lines
     if len(lines) > num_seeds * 4:
@@ -138,9 +147,11 @@ def find_random_seeds(text, num_seeds=50, max_seed_length=50):
     return [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
 
 
-# Reformat our data vector into input and target sequences to feed into our RNN.
-# Tricky with stateful rnns.
 def shape_for_stateful_rnn(data, batch_size, seq_length, seq_step):
+    """
+    Reformat our data vector into input and target sequences to feed into our
+    RNN. Tricky with stateful RNNs.
+    """
     # Our target sequences are simply one timestep ahead of our input sequences.
     # e.g. with an input vector "wherefore"...
     # targets:   h e r e f o r e
@@ -170,7 +181,7 @@ def _create_sequences(vector, seq_length, seq_step):
         pass_samples = vector[offset:]
         num_pass_samples = pass_samples.size // seq_length
         pass_samples = np.resize(pass_samples,
-                                (num_pass_samples, seq_length))
+                                 (num_pass_samples, seq_length))
         passes.append(pass_samples)
     # Stack our sequences together. This will technically leave a few "breaks"
     # in our sequence chain where we've looped over are entire dataset and

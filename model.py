@@ -17,9 +17,11 @@ from utils import print_cyan, print_green, print_red
 from utils import sample_preds, shape_for_stateful_rnn, find_random_seeds
 
 
-# Live samples the model after each epoch, which can be very useful when
-# tweaking parameters and/or dataset
 class LiveSamplerCallback(Callback):
+    """
+    Live samples the model after each epoch, which can be very useful when
+    tweaking parameters and/or the dataset.
+    """
     def __init__(self, meta_model):
         super(LiveSamplerCallback, self).__init__()
         self.meta_model = meta_model
@@ -34,9 +36,11 @@ class LiveSamplerCallback(Callback):
             print('-' * 50)
 
 
-# We wrap the keras model in our own metaclass that handles text loading,
-# provides convient train and sample functions.
 class MetaModel:
+    """
+    We wrap the keras model in our own metaclass that handles text loading,
+    and provides convient train and sample functions.
+    """
     def __init__(self):
         self.train_model = None
         self.sample_model = None
@@ -110,11 +114,13 @@ class MetaModel:
         self.sample_model.trainable = False
 
     def update_sample_model_weights(self):
+        """Sync training and sampling model weights"""
         self.sample_model.set_weights(self.train_model.get_weights())
 
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
               num_layers, num_epochs, live_sample):
+        """Train the model"""
         print_green('Loading data...')
         load_start = time.time()
         x, y, x_val, y_val = self._load_data(data_dir, word_tokens,
@@ -145,6 +151,7 @@ class MetaModel:
         print_red('Training time', train_end - train_start)
 
     def sample(self, seed=None, length=None, diversity=1.0):
+        """Sample the model"""
         self.sample_model.reset_states()
 
         if length is None:
@@ -185,8 +192,8 @@ class MetaModel:
         return state
 
 
-# Save the keras model directly and pickle our meta model class
 def save(model, data_dir):
+    """Save the keras model directly and pickle our meta model clas"""
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
     model.sample_model.save(filepath=keras_file_path)
@@ -194,8 +201,8 @@ def save(model, data_dir):
     print_green('Model saved to', pickle_file_path, keras_file_path)
 
 
-# Load the meta model and restore its internal keras model
 def load(data_dir):
+    """Load the meta model and restore its internal keras model"""
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
     model = pickle.load(open(pickle_file_path, 'rb'))

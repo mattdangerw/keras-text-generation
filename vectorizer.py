@@ -9,6 +9,10 @@ from utils import print_red
 from utils import word_tokenize, word_detokenize
 
 class Vectorizer:
+    """
+    Transforms text to vectors of integer numbers representing in text tokens
+    and back. Handles word and character level tokenization.
+    """
     def __init__(self, text, word_tokens, pristine_input, pristine_output):
         self.word_tokens = word_tokens
         self._pristine_input = pristine_input
@@ -41,6 +45,7 @@ class Vectorizer:
         return ''.join(tokens)
 
     def vectorize(self, text):
+        """Transforms text to a vector of integers"""
         tokens = self._tokenize(text)
         indices = []
         for token in tokens:
@@ -51,5 +56,6 @@ class Vectorizer:
         return np.array(indices, dtype=np.int32)
 
     def unvectorize(self, vector):
+        """Transforms a vector of integers back to text"""
         tokens = [self._indices_token[index] for index in vector.tolist()]
         return self._detokenize(tokens)
