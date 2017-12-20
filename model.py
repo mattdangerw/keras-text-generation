@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import pickle
 import random
+import sys
 import time
 
 from keras.callbacks import Callback
@@ -13,7 +14,7 @@ import numpy as np
 
 from vectorizer import Vectorizer
 from utils import print_cyan, print_green, print_red
-from utils import sample_preds, reshape_for_stateful_rnn, find_random_seeds
+from utils import sample_preds, shape_for_stateful_rnn, find_random_seeds
 
 
 # Live samples the model after each epoch, which can be very useful when
@@ -42,6 +43,46 @@ class MetaModel:
         self.seeds = None
         self.vectorizer = None
 
+    # Read in our data and validation texts
+    def _load_data(self, data_dir, word_tokens, pristine_input, pristine_output,
+                   batch_size, seq_length, seq_step):
+        try:
+            with open(os.path.join(data_dir, 'input.txt')) as input_file:
+                text = input_file.read()
+        except FileNotFoundError:
+            print_red("No input.txt in data_dir")
+            sys.exit(1)
+
+        skip_validate = True
+        try:
+            with open(os.path.join(data_dir, 'validate.txt')) as validate_file:
+                text_val = validate_file.read()
+                skip_validate = False
+        except FileNotFoundError:
+            pass # Validation text optional
+
+        # Find some good default seed string in our source text.
+        self.seeds = find_random_seeds(text)
+        # Include our validation texts with our vectorizer
+        all_text = text if skip_validate else '\n'.join([text, text_val])
+        self.vectorizer = Vectorizer(all_text, word_tokens,
+                                     pristine_input, pristine_output)
+
+        data = self.vectorizer.vectorize(text)
+        x, y = shape_for_stateful_rnn(data, batch_size, seq_length, seq_step)
+        print('x.shape:', x.shape)
+        print('y.shape:', y.shape)
+
+        if skip_validate:
+            return x, y, None, None
+
+        data_val = self.vectorizer.vectorize(text_val)
+        x_val, y_val = shape_for_stateful_rnn(data_val, batch_size,
+                                              seq_length, seq_step)
+        print('x_val.shape:', x_val.shape)
+        print('y_val.shape:', y_val.shape)
+        return x, y, x_val, y_val
+
     # Builds the underlying keras model
     def _build_models(self, batch_size, embedding_size, rnn_size, num_layers):
         model = Sequential()
@@ -57,7 +98,8 @@ class MetaModel:
         # With sparse_categorical_crossentropy we can leave as labels as
         # integers instead of one-hot vectors
         model.compile(loss='sparse_categorical_crossentropy',
-                      optimizer='rmsprop')
+                      optimizer='rmsprop',
+                      metrics=['accuracy'])
         model.summary()
 
         # Keep a separate model with batch_size 1 for training
@@ -75,23 +117,9 @@ class MetaModel:
               num_layers, num_epochs, skip_sampling):
         print_green('Loading data...')
         load_start = time.time()
-
-        text = open(os.path.join(data_dir, 'input.txt')).read()
-        self.seeds = find_random_seeds(text)
-        self.vectorizer = Vectorizer(text, word_tokens,
-                                     pristine_input, pristine_output)
-
-        data = self.vectorizer.vectorize(text)
-        x = reshape_for_stateful_rnn(data[:-1], batch_size,
-                                     seq_length, seq_step)
-        y = reshape_for_stateful_rnn(data[1:], batch_size,
-                                     seq_length, seq_step)
-        # Y data needs an extra axis to work with the sparse categorical
-        # crossentropy loss function
-        y = y[:, :, np.newaxis]
-
-        print('x.shape:', x.shape)
-        print('y.shape:', y.shape)
+        x, y, x_val, y_val = self._load_data(data_dir, word_tokens,
+                                             pristine_input, pristine_output,
+                                             batch_size, seq_length, seq_step)
         load_end = time.time()
         print_red('Data load time', load_end - load_start)
 
@@ -103,11 +131,10 @@ class MetaModel:
 
         print_green('Training...')
         train_start = time.time()
-        # Train the model
-        callbacks = []
-        if not skip_sampling:
-            callbacks.append(LiveSamplerCallback(self))
+        validation_data = (x_val, y_val) if (x_val is not None) else None
+        callbacks = None if skip_sampling else [LiveSamplerCallback(self)]
         self.train_model.fit(x, y,
+                             validation_data=validation_data,
                              batch_size=batch_size,
                              shuffle=False,
                              epochs=num_epochs,
@@ -130,7 +157,6 @@ class MetaModel:
             print('-' * 50)
 
         preds = None
-
         # Feed in seed string
         print_cyan(seed, end=' ' if self.vectorizer.word_tokens else '')
         seed_vector = self.vectorizer.vectorize(seed)

@@ -138,31 +138,58 @@ def find_random_seeds(text, num_seeds=50, max_seed_length=50):
     return [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
 
 
-# Reformat our data vector to feed into our model. Tricky with stateful rnn
-def reshape_for_stateful_rnn(sequence, batch_size, seq_length, seq_step):
-    passes = []
-    # Take strips of our data at seq_step intervals up to our seq_length
+# Reformat our data vector into input and target sequences to feed into our RNN.
+# Tricky with stateful rnns.
+def shape_for_stateful_rnn(data, batch_size, seq_length, seq_step):
+    # Our target sequences are simply one timestep ahead of our input sequences.
+    # e.g. with an input vector "wherefore"...
+    # targets:   h e r e f o r e
+    # preditcts  ^ ^ ^ ^ ^ ^ ^ ^
+    # inputs:    w h e r e f o r
+    inputs = data[:-1]
+    targets = data[1:]
+
+    # We split our long vectors into semi-redundant seq_length sequences
+    inputs = _create_sequences(inputs, seq_length, seq_step)
+    targets = _create_sequences(targets, seq_length, seq_step)
+
+    # Make sure our sequences line up across batches for stateful RNNs
+    inputs = _batch_sort_for_stateful_rnn(inputs, batch_size)
+    targets = _batch_sort_for_stateful_rnn(targets, batch_size)
+
+    # Our target data needs an extra axis to work with the sparse categorical
+    # crossentropy loss function
+    targets = targets[:, :, np.newaxis]
+    return inputs, targets
+
+def _create_sequences(vector, seq_length, seq_step):
+    # Take strips of our vector at seq_step intervals up to our seq_length
     # and cut those strips into seq_length sequences
+    passes = []
     for offset in range(0, seq_length, seq_step):
-        pass_samples = sequence[offset:]
+        pass_samples = vector[offset:]
         num_pass_samples = pass_samples.size // seq_length
         pass_samples = np.resize(pass_samples,
-                                 (num_pass_samples, seq_length))
+                                (num_pass_samples, seq_length))
         passes.append(pass_samples)
-    # Stack our samples together and make sure they fit evenly into batches
-    all_samples = np.concatenate(passes)
-    num_batches = all_samples.shape[0] // batch_size
-    num_samples = num_batches * batch_size
+    # Stack our sequences together. This will technically leave a few "breaks"
+    # in our sequence chain where we've looped over are entire dataset and
+    # return to the start, but with large datasets this should be negligable
+    return np.concatenate(passes)
+
+def _batch_sort_for_stateful_rnn(sequences, batch_size):
     # Now the tricky part, we need to reformat our data so the first
     # sequence in the nth batch picks up exactly where the first sequence
-    # in the (n - 1)th batch left off, as the lstm cell state will not be
+    # in the (n - 1)th batch left off, as the RNN cell state will not be
     # reset between batches in the stateful model.
-    reshuffled = np.zeros((num_samples, seq_length), dtype=np.int32)
+    num_batches = sequences.shape[0] // batch_size
+    num_samples = num_batches * batch_size
+    reshuffled = np.zeros((num_samples, sequences.shape[1]), dtype=np.int32)
     for batch_index in range(batch_size):
         # Take a slice of num_batches consecutive samples
         slice_start = batch_index * num_batches
         slice_end = slice_start + num_batches
-        index_slice = all_samples[slice_start:slice_end, :]
+        index_slice = sequences[slice_start:slice_end, :]
         # Spread it across each of our batches in the same index position
         reshuffled[batch_index::batch_size, :] = index_slice
     return reshuffled
