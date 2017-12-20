@@ -114,7 +114,7 @@ class MetaModel:
 
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
-              num_layers, num_epochs, skip_sampling):
+              num_layers, num_epochs, live_sample):
         print_green('Loading data...')
         load_start = time.time()
         x, y, x_val, y_val = self._load_data(data_dir, word_tokens,
@@ -132,7 +132,7 @@ class MetaModel:
         print_green('Training...')
         train_start = time.time()
         validation_data = (x_val, y_val) if (x_val is not None) else None
-        callbacks = None if skip_sampling else [LiveSamplerCallback(self)]
+        callbacks = [LiveSamplerCallback(self)] if live_sample else None
         self.train_model.fit(x, y,
                              validation_data=validation_data,
                              batch_size=batch_size,

@@ -28,8 +28,8 @@ pip install keras colorama
 python train.py
 # Sample the included Shakespeare corpus with default parameters
 python samply.py
-# Train with long samples, more layers and more epochs
-python train.py --seq-length 100 --num-layers 4 --num-epochs 100
+# Train with long samples, more layers, more epochs, and live sampling
+python train.py --seq-length 100 --num-layers 4 --num-epochs 100 --live-sample
 # Sample with a random seed for 500 characters and more random output
 python sample.py --length 500 --temperature 2.0
 # Train on a new dataset with a word level model and larger embedding

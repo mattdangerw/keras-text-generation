@@ -10,6 +10,8 @@ def main():
                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data-dir', type=str, default='data/tinyshakespeare',
                         help='data directory containing input.txt')
+    parser.add_argument('--live-sample', action='store_true',
+                        help='live sample the model after each epoch')
     parser.add_argument('--word-tokens', action='store_true',
                         help='whether to model the rnn at word level or char level')
     parser.add_argument('--pristine-input', action='store_true',
@@ -30,8 +32,6 @@ def main():
                         help='how often to pull a training sequence from the data')
     parser.add_argument('--num-epochs', type=int, default=50,
                         help='number of epochs')
-    parser.add_argument('--skip-sampling', action='store_true',
-                        help='skip the live sampling stage of training')
     args = parser.parse_args()
     train(args)
 
