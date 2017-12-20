@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import argparse
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 from model import MetaModel, save
 
 
 def main():
-    parser = argparse.ArgumentParser(
-                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data-dir', type=str, default='data/tinyshakespeare',
                         help='data directory containing input.txt')
     parser.add_argument('--live-sample', action='store_true',
@@ -33,10 +32,7 @@ def main():
     parser.add_argument('--num-epochs', type=int, default=50,
                         help='number of epochs')
     args = parser.parse_args()
-    train(args)
 
-
-def train(args):
     model = MetaModel()
     model.train(**vars(args))
     save(model, args.data_dir)

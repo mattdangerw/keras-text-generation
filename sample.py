@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import argparse
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 from model import load
 
 
 def main():
-    parser = argparse.ArgumentParser(
-                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data-dir', type=str, default='data/tinyshakespeare',
                         help='data directory containing input.txt')
     parser.add_argument('--seed', type=str, default=None,
@@ -17,10 +16,7 @@ def main():
     parser.add_argument('--diversity', type=float, default=1.0,
                         help='Sampling diversity')
     args = parser.parse_args()
-    train(args)
 
-
-def train(args):
     model = load(args.data_dir)
     del args.data_dir
     print(model.sample(**vars(args)))
