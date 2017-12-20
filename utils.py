@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+import random
+import re
+
 import colorama
 import numpy as np
-import re
 
 colorama.init()
 
@@ -44,7 +46,7 @@ def sample_preds(preds, temperature=1.0):
 # with a specific token. You may want to consider using a more robust tokenizer
 # as a preprocessing step, and using the --pristine-input flag.
 def word_tokenize(text):
-    REGEXES = [
+    regexes = [
         # Starting quotes
         (re.compile(r'(\s)"'), r'\1 “ '),
         (re.compile(r'([ (\[{<])"'), r'\1 “ '),
@@ -77,7 +79,7 @@ def word_tokenize(text):
     ]
 
     text = " " + text + " "
-    for regexp, substitution in REGEXES:
+    for regexp, substitution in regexes:
         text = regexp.sub(substitution, text)
     return text.split()
 
@@ -85,7 +87,7 @@ def word_tokenize(text):
 # A hueristic attempt to undo the Penn Treebank tokenization above. Pass the
 # --pristine-output flag if no attempt at detokenizing is desired.
 def word_detokenize(tokens):
-    REGEXES = [
+    regexes = [
         # Newlines
         (re.compile(r'[ ]?\\n[ ]?'), r'\n'),
         # Contractions
@@ -118,6 +120,49 @@ def word_detokenize(tokens):
     ]
 
     text = ' '.join(tokens)
-    for regexp, substitution in REGEXES:
+    for regexp, substitution in regexes:
         text = regexp.sub(substitution, text)
     return text.strip()
+
+
+# Heuristic attempt to find some good seed strings in the input text
+def find_random_seeds(text, num_seeds=50, max_seed_length=50):
+    lines = text.split('\n')
+    # Take a random sampling of lines
+    if len(lines) > num_seeds * 4:
+        lines = random.sample(lines, num_seeds * 4)
+    # Take the top quartile based on length so we get decent seed strings
+    lines = sorted(lines, key=len, reverse=True)
+    lines = lines[:num_seeds]
+    # Split on the first whitespace before max_seed_length
+    return [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
+
+
+# Reformat our data vector to feed into our model. Tricky with stateful rnn
+def reshape_for_stateful_rnn(sequence, batch_size, seq_length, seq_step):
+    passes = []
+    # Take strips of our data at seq_step intervals up to our seq_length
+    # and cut those strips into seq_length sequences
+    for offset in range(0, seq_length, seq_step):
+        pass_samples = sequence[offset:]
+        num_pass_samples = pass_samples.size // seq_length
+        pass_samples = np.resize(pass_samples,
+                                 (num_pass_samples, seq_length))
+        passes.append(pass_samples)
+    # Stack our samples together and make sure they fit evenly into batches
+    all_samples = np.concatenate(passes)
+    num_batches = all_samples.shape[0] // batch_size
+    num_samples = num_batches * batch_size
+    # Now the tricky part, we need to reformat our data so the first
+    # sequence in the nth batch picks up exactly where the first sequence
+    # in the (n - 1)th batch left off, as the lstm cell state will not be
+    # reset between batches in the stateful model.
+    reshuffled = np.zeros((num_samples, seq_length), dtype=np.int32)
+    for batch_index in range(batch_size):
+        # Take a slice of num_batches consecutive samples
+        slice_start = batch_index * num_batches
+        slice_end = slice_start + num_batches
+        index_slice = all_samples[slice_start:slice_end, :]
+        # Spread it across each of our batches in the same index position
+        reshuffled[batch_index::batch_size, :] = index_slice
+    return reshuffled

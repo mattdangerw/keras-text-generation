@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from collections import Counter
 import os
 import pickle
 import random
@@ -12,8 +11,9 @@ from keras.layers import Dense, Embedding, LSTM, TimeDistributed
 from keras.models import load_model, Sequential
 import numpy as np
 
+from vectorizer import Vectorizer
 from utils import print_cyan, print_green, print_red
-from utils import sample_preds, word_tokenize, word_detokenize
+from utils import sample_preds, reshape_for_stateful_rnn, find_random_seeds
 
 
 # Live samples the model after each epoch, which can be very useful when
@@ -27,10 +27,9 @@ class LiveSamplerCallback(Callback):
         print()
         print_green('Sampling model...')
         self.meta_model.update_sample_model_weights()
-        length = 100 if self.meta_model.word_tokens else 500
         for diversity in [0.2, 0.5, 1.0, 1.2]:
             print('Using diversity:', diversity)
-            self.meta_model.sample(length=length, diversity=diversity)
+            self.meta_model.sample(diversity=diversity)
             print('-' * 50)
 
 
@@ -38,117 +37,22 @@ class LiveSamplerCallback(Callback):
 # provides convient train and sample functions.
 class MetaModel:
     def __init__(self):
-        self.word_tokens = False
-        self.pristine_input = False
-        self.pristine_output = False
         self.train_model = None
         self.sample_model = None
         self.seeds = None
-        self.token_indices = None
-        self.indices_token = None
-        self.vocab_size = 0
-
-    def tokenize(self, text):
-        if not self.pristine_input:
-            text = text.lower()
-        if self.word_tokens:
-            if self.pristine_input:
-                return text.split()
-            return word_tokenize(text)
-        return text
-
-    def detokenize(self, tokens):
-        if self.word_tokens:
-            if self.pristine_output:
-                return ' '.join(tokens)
-            return word_detokenize(tokens)
-        return ''.join(tokens)
-
-    def vectorize(self, text):
-        tokens = self.tokenize(text)
-        indices = []
-        for token in tokens:
-            if token in self.token_indices:
-                indices.append(self.token_indices[token])
-            else:
-                print_red('Ignoring unrecognized token:', token)
-        return np.array(indices, dtype=np.int32)
-
-    def unvectorize(self, vector):
-        tokens = [self.indices_token[index] for index in vector.tolist()]
-        return self.detokenize(tokens)
-
-    # Heuristic attempt to find some good seed strings in the input text
-    def _find_random_seeds(self, text, num_seeds=50, max_seed_length=50):
-        lines = text.split('\n')
-        # Take a random sampling of lines
-        if len(lines) > num_seeds * 4:
-            lines = random.sample(lines, num_seeds * 4)
-        # Take the top quartile based on length so we get decent seed strings
-        lines = sorted(lines, key=len, reverse=True)
-        lines = lines[:num_seeds]
-        # Split on the first whitespace before max_seed_length
-        lines = [line[:max_seed_length].rsplit(None, 1)[0] for line in lines]
-        self.seeds = lines
-
-    # Reads in the input text and converts to a vector
-    def _load_text(self, data_dir):
-        text = open(os.path.join(data_dir, 'input.txt')).read()
-        self._find_random_seeds(text)
-
-        tokens = self.tokenize(text)
-        print('corpus length:', len(tokens))
-        token_counts = Counter(tokens)
-        # Sort so most common tokens come first in our vocabulary
-        tokens = [x[0] for x in token_counts.most_common()]
-        self.token_indices = {x: i for i, x in enumerate(tokens)}
-        self.indices_token = {i: x for i, x in enumerate(tokens)}
-        self.vocab_size = len(tokens)
-        print('vocab size:', self.vocab_size)
-
-        return self.vectorize(text)
-
-    # Reformat our data vector to feed into our model. Tricky with stateful rnn
-    def _reshape_for_stateful_rnn(self, sequence, batch_size,
-                                  seq_length, seq_step):
-        passes = []
-        # Take strips of our data at seq_step intervals up to our seq_length
-        # and cut those strips into seq_length sequences
-        for offset in range(0, seq_length, seq_step):
-            pass_samples = sequence[offset:]
-            num_pass_samples = pass_samples.size // seq_length
-            pass_samples = np.resize(pass_samples,
-                                     (num_pass_samples, seq_length))
-            passes.append(pass_samples)
-        # Stack our samples together and make sure they fit evenly into batches
-        all_samples = np.concatenate(passes)
-        num_batches = all_samples.shape[0] // batch_size
-        num_samples = num_batches * batch_size
-        # Now the tricky part, we need to reformat our data so the first
-        # sequence in the nth batch picks up exactly where the first sequence
-        # in the (n - 1)th batch left off, as the lstm cell state will not be
-        # reset between batches in the stateful model.
-        reshuffled = np.zeros((num_samples, seq_length), dtype=np.int32)
-        for batch_index in range(batch_size):
-            # Take a slice of num_batches consecutive samples
-            slice_start = batch_index * num_batches
-            slice_end = slice_start + num_batches
-            index_slice = all_samples[slice_start:slice_end, :]
-            # Spread it across each of our batches in the same index position
-            reshuffled[batch_index::batch_size, :] = index_slice
-        return reshuffled
+        self.vectorizer = None
 
     # Builds the underlying keras model
     def _build_models(self, batch_size, embedding_size, rnn_size, num_layers):
         model = Sequential()
-        model.add(Embedding(self.vocab_size,
+        model.add(Embedding(self.vectorizer.vocab_size,
                             embedding_size,
                             batch_input_shape=(batch_size, None)))
         for layer in range(num_layers):
             model.add(LSTM(rnn_size,
                            stateful=True,
                            return_sequences=True))
-        model.add(TimeDistributed(Dense(self.vocab_size,
+        model.add(TimeDistributed(Dense(self.vectorizer.vocab_size,
                                         activation='softmax')))
         # With sparse_categorical_crossentropy we can leave as labels as
         # integers instead of one-hot vectors
@@ -169,18 +73,19 @@ class MetaModel:
     def train(self, data_dir, word_tokens, pristine_input, pristine_output,
               batch_size, seq_length, seq_step, embedding_size, rnn_size,
               num_layers, num_epochs, skip_sampling):
-        # Store metadata we also need for sampling...
-        self.word_tokens = word_tokens
-        self.pristine_input = pristine_input
-        self.pristine_output = pristine_input or pristine_output
-
         print_green('Loading data...')
         load_start = time.time()
-        data = self._load_text(data_dir)
-        x = self._reshape_for_stateful_rnn(data[:-1], batch_size,
-                                           seq_length, seq_step)
-        y = self._reshape_for_stateful_rnn(data[1:], batch_size,
-                                           seq_length, seq_step)
+
+        text = open(os.path.join(data_dir, 'input.txt')).read()
+        self.seeds = find_random_seeds(text)
+        self.vectorizer = Vectorizer(text, word_tokens,
+                                     pristine_input, pristine_output)
+
+        data = self.vectorizer.vectorize(text)
+        x = reshape_for_stateful_rnn(data[:-1], batch_size,
+                                     seq_length, seq_step)
+        y = reshape_for_stateful_rnn(data[1:], batch_size,
+                                     seq_length, seq_step)
         # Y data needs an extra axis to work with the sparse categorical
         # crossentropy loss function
         y = y[:, :, np.newaxis]
@@ -212,8 +117,11 @@ class MetaModel:
         train_end = time.time()
         print_red('Training time', train_end - train_start)
 
-    def sample(self, seed=None, length=500, diversity=1.0):
+    def sample(self, seed=None, length=None, diversity=1.0):
         self.sample_model.reset_states()
+
+        if length is None:
+            length = 100 if self.vectorizer.word_tokens else 500
 
         if seed is None:
             seed = random.choice(self.seeds)
@@ -224,8 +132,8 @@ class MetaModel:
         preds = None
 
         # Feed in seed string
-        print_cyan(seed, end=' ' if self.word_tokens else '')
-        seed_vector = self.vectorize(seed)
+        print_cyan(seed, end=' ' if self.vectorizer.word_tokens else '')
+        seed_vector = self.vectorizer.vectorize(seed)
         for char_index in np.nditer(seed_vector):
             preds = self.sample_model.predict(np.array([[char_index]]),
                                               verbose=0)
@@ -239,7 +147,7 @@ class MetaModel:
             sampled_indices = np.append(sampled_indices, char_index)
             preds = self.sample_model.predict(np.array([[char_index]]),
                                               verbose=0)
-        sample = self.unvectorize(sampled_indices)
+        sample = self.vectorizer.unvectorize(sampled_indices)
         print(sample)
         return sample
 
