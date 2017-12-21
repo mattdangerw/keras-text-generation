@@ -165,9 +165,9 @@ class MetaModel:
             print('-' * 50)
 
         preds = None
+        seed_vector = self.vectorizer.vectorize(seed)
         # Feed in seed string
         print_cyan(seed, end=' ' if self.vectorizer.word_tokens else '')
-        seed_vector = self.vectorizer.vectorize(seed)
         for char_index in np.nditer(seed_vector):
             preds = self.sample_model.predict(np.array([[char_index]]),
                                               verbose=0)
