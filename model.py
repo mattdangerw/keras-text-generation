@@ -8,7 +8,7 @@ import sys
 import time
 
 from keras.callbacks import Callback
-from keras.layers import Dense, Embedding, LSTM, TimeDistributed
+from keras.layers import Dense, Dropout, Embedding, LSTM, TimeDistributed
 from keras.models import load_model, Sequential
 import numpy as np
 
@@ -97,6 +97,7 @@ class MetaModel:
             model.add(LSTM(rnn_size,
                            stateful=True,
                            return_sequences=True))
+            model.add(Dropout(0.2))
         model.add(TimeDistributed(Dense(self.vectorizer.vocab_size,
                                         activation='softmax')))
         # With sparse_categorical_crossentropy we can leave as labels as
