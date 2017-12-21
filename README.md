@@ -65,7 +65,7 @@ the input text and feed it into the RNN character by character. Under the word
 level model, the input text will be split into individual word tokens and each
 token will be given a separate value before being fed into the RNN. Word will be
 tokenized roughly following the Penn Treebank approach. By default we will
-hueristically attempt to "detokenize" the text after sampling, but this can be
+heuristically attempt to "detokenize" the text after sampling, but this can be
 disabled with `--pristine-output`.
 
 ### train.py

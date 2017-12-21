@@ -93,7 +93,7 @@ def word_tokenize(text):
 
 def word_detokenize(tokens):
     """
-    A hueristic attempt to undo the Penn Treebank tokenization above. Pass the
+    A heuristic attempt to undo the Penn Treebank tokenization above. Pass the
     --pristine-output flag if no attempt at detokenizing is desired.
     """
     regexes = [
@@ -155,7 +155,7 @@ def shape_for_stateful_rnn(data, batch_size, seq_length, seq_step):
     # Our target sequences are simply one timestep ahead of our input sequences.
     # e.g. with an input vector "wherefore"...
     # targets:   h e r e f o r e
-    # preditcts  ^ ^ ^ ^ ^ ^ ^ ^
+    # predicts   ^ ^ ^ ^ ^ ^ ^ ^
     # inputs:    w h e r e f o r
     inputs = data[:-1]
     targets = data[1:]
@@ -185,7 +185,7 @@ def _create_sequences(vector, seq_length, seq_step):
         passes.append(pass_samples)
     # Stack our sequences together. This will technically leave a few "breaks"
     # in our sequence chain where we've looped over are entire dataset and
-    # return to the start, but with large datasets this should be negligable
+    # return to the start, but with large datasets this should be neglegable
     return np.concatenate(passes)
 
 def _batch_sort_for_stateful_rnn(sequences, batch_size):

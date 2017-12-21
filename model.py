@@ -39,7 +39,7 @@ class LiveSamplerCallback(Callback):
 class MetaModel:
     """
     We wrap the keras model in our own metaclass that handles text loading,
-    and provides convient train and sample functions.
+    and provides convenient train and sample functions.
     """
     def __init__(self):
         self.train_model = None
@@ -194,7 +194,7 @@ class MetaModel:
 
 
 def save(model, data_dir):
-    """Save the keras model directly and pickle our meta model clas"""
+    """Save the keras model directly and pickle our meta model class"""
     keras_file_path = os.path.join(data_dir, 'model.h5')
     pickle_file_path = os.path.join(data_dir, 'model.pkl')
     model.sample_model.save(filepath=keras_file_path)
