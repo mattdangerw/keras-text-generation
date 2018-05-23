@@ -68,6 +68,7 @@ def word_tokenize(text):
         (re.compile(r'([\]\[\(\)\{\}\<\>])'), r' \1 '),
         # Double dashes
         (re.compile(r'--'), r' -- '),
+        (re.compile(r'—'), r' — '),
         # Ending quotes
         (re.compile(r'"'), r' ” '),
         (re.compile(r"([^' ])('s|'m|'d) "), r"\1 \2 "),
