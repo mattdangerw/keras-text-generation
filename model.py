@@ -48,8 +48,8 @@ class MetaModel:
         self.vectorizer = None
 
     # Read in our data and validation texts
-    def _load_data(self, data_dir, word_tokens, pristine_input, pristine_output,
-                   batch_size, seq_length, seq_step):
+    def _load_data(self, data_dir, word_tokens, cutoff, pristine_input,
+                   pristine_output, batch_size, seq_length, seq_step):
         try:
             with open(os.path.join(data_dir, 'input.txt')) as input_file:
                 text = input_file.read()
@@ -69,7 +69,7 @@ class MetaModel:
         self.seeds = find_random_seeds(text)
         # Include our validation texts with our vectorizer
         all_text = text if skip_validate else '\n'.join([text, text_val])
-        self.vectorizer = Vectorizer(all_text, word_tokens,
+        self.vectorizer = Vectorizer(all_text, word_tokens, cutoff,
                                      pristine_input, pristine_output)
 
         data = self.vectorizer.vectorize(text)
@@ -118,13 +118,13 @@ class MetaModel:
         """Sync training and sampling model weights"""
         self.sample_model.set_weights(self.train_model.get_weights())
 
-    def train(self, data_dir, word_tokens, pristine_input, pristine_output,
-              batch_size, seq_length, seq_step, embedding_size, rnn_size,
-              num_layers, num_epochs, live_sample):
+    def train(self, data_dir, word_tokens, cutoff, pristine_input,
+              pristine_output, batch_size, seq_length, seq_step, embedding_size,
+              rnn_size, num_layers, num_epochs, live_sample):
         """Train the model"""
         print_green('Loading data...')
         load_start = time.time()
-        x, y, x_val, y_val = self._load_data(data_dir, word_tokens,
+        x, y, x_val, y_val = self._load_data(data_dir, word_tokens, cutoff,
                                              pristine_input, pristine_output,
                                              batch_size, seq_length, seq_step)
         load_end = time.time()

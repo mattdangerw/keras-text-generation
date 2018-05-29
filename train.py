@@ -13,6 +13,8 @@ def main():
                         help='live sample the model after each epoch')
     parser.add_argument('--word-tokens', action='store_true',
                         help='whether to model the rnn at word level or char level')
+    parser.add_argument('--cutoff', type=int, default=0,
+                        help='do not distinguish between tokens appearing less than cuttoff times')
     parser.add_argument('--pristine-input', action='store_true',
                         help='do not lowercase or attempt fancy tokenization of input')
     parser.add_argument('--pristine-output', action='store_true',
