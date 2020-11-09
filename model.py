@@ -7,9 +7,9 @@ import random
 import sys
 import time
 
-from keras.callbacks import Callback
-from keras.layers import Dense, Dropout, Embedding, LSTM, TimeDistributed
-from keras.models import load_model, Sequential
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.layers import Dense, Dropout, Embedding, LSTM, TimeDistributed
+from tensorflow.keras.models import load_model, Sequential
 import numpy as np
 
 from vectorizer import Vectorizer
@@ -107,10 +107,10 @@ class MetaModel:
                       metrics=['accuracy'])
         model.summary()
 
-        # Keep a separate model with batch_size 1 for training
+        # Keep a separate model with batch_size 1 for sampling
         self.train_model = model
         config = model.get_config()
-        config[0]['config']['batch_input_shape'] = (1, None)
+        config['layers'][0]['config']['batch_input_shape'] = (1, None)
         self.sample_model = Sequential.from_config(config)
         self.sample_model.trainable = False
 
